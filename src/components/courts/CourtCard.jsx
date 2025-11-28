@@ -1,10 +1,22 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { MapPin, Star, Clock, DollarSign } from "lucide-react";
+import { MapPin, Star, Clock, Navigation, Wifi, Car, ShowerHead, Coffee, Shirt, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export default function CourtCard({ court, featured = false }) {
+const AMENITY_ICONS = {
+  "Wifi": Wifi,
+  "WiFi": Wifi,
+  "Estacionamiento": Car,
+  "Parking": Car,
+  "Duchas": ShowerHead,
+  "Vestuarios": Shirt,
+  "Cafetería": Coffee,
+  "Cafeteria": Coffee,
+  "Tribuna": Users,
+};
+
+export default function CourtCard({ court, featured = false, showDistance = false }) {
   const sportLabels = {
     futbol: "Fútbol",
     voley: "Vóley",
@@ -13,6 +25,14 @@ export default function CourtCard({ court, featured = false }) {
     tenis: "Tenis",
     otro: "Otro"
   };
+
+  const formatDistance = (distance) => {
+    if (!distance || distance === 999) return null;
+    if (distance < 1) return `${Math.round(distance * 1000)} m`;
+    return `${distance.toFixed(1)} km`;
+  };
+
+  const displayedAmenities = court.amenities?.slice(0, 4) || [];
 
   return (
     <Link to={createPageUrl(`CourtDetail?id=${court.id}`)}>
@@ -39,6 +59,14 @@ export default function CourtCard({ court, featured = false }) {
             </div>
           )}
 
+          {/* Distance Badge */}
+          {showDistance && court.distance && court.distance !== 999 && (
+            <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-blue-600 text-white px-2.5 py-1 rounded-lg text-sm font-medium shadow-lg">
+              <Navigation className="h-3.5 w-3.5" />
+              {formatDistance(court.distance)}
+            </div>
+          )}
+
           {/* Price */}
           <div className="absolute bottom-3 right-3 bg-teal-600 text-white px-3 py-1.5 rounded-lg font-semibold text-sm shadow-lg">
             S/ {court.price_per_hour}/hora
@@ -55,6 +83,25 @@ export default function CourtCard({ court, featured = false }) {
             <MapPin className="h-4 w-4 flex-shrink-0" />
             <span className="line-clamp-1">{court.address}</span>
           </div>
+
+          {/* Amenities Icons */}
+          {displayedAmenities.length > 0 && (
+            <div className="flex items-center gap-2 mt-3">
+              {displayedAmenities.map((amenity, idx) => {
+                const IconComponent = AMENITY_ICONS[amenity];
+                return IconComponent ? (
+                  <div key={idx} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center" title={amenity}>
+                    <IconComponent className="h-3.5 w-3.5 text-slate-600" />
+                  </div>
+                ) : (
+                  <div key={idx} className="px-2 py-0.5 rounded-full bg-slate-100 text-xs text-slate-600">{amenity}</div>
+                );
+              })}
+              {court.amenities?.length > 4 && (
+                <span className="text-xs text-slate-400">+{court.amenities.length - 4}</span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
             <div className="flex items-center gap-1.5 text-slate-500 text-sm">

@@ -12,7 +12,8 @@ import {
   Calendar,
   Trophy,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +22,58 @@ import CourtCard from "@/components/courts/CourtCard";
 import MatchCard from "@/components/community/MatchCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
+// Calculate distance between two coordinates (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(false);
+
+  // Get user's location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => setLocationError(true),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const { data: courts = [], isLoading: courtsLoading } = useQuery({
     queryKey: ['featured-courts'],
-    queryFn: () => base44.entities.Court.filter({ status: "approved", is_active: true }, '-average_rating', 6),
+    queryFn: () => base44.entities.Court.filter({ status: "approved", is_active: true }, '-average_rating', 20),
   });
+
+  // Sort courts by distance if user location available
+  const sortedCourts = React.useMemo(() => {
+    if (!userLocation || courts.length === 0) return courts.slice(0, 6);
+    
+    return [...courts]
+      .map(court => ({
+        ...court,
+        distance: court.latitude && court.longitude 
+          ? calculateDistance(userLocation.lat, userLocation.lng, court.latitude, court.longitude)
+          : 999
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 6);
+  }, [courts, userLocation]);
 
   const { data: matches = [], isLoading: matchesLoading } = useQuery({
     queryKey: ['upcoming-matches'],
@@ -119,10 +165,19 @@ export default function Home() {
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800">
-              Canchas Destacadas
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
+              {userLocation ? (
+                <>
+                  <Navigation className="h-6 w-6 text-teal-500" />
+                  Canchas Cercanas
+                </>
+              ) : (
+                "Canchas Destacadas"
+              )}
             </h2>
-            <p className="text-slate-500 mt-1">Las mejor calificadas cerca de ti</p>
+            <p className="text-slate-500 mt-1">
+              {userLocation ? "Ordenadas por distancia desde tu ubicación" : "Las mejor calificadas cerca de ti"}
+            </p>
           </div>
           <Link 
             to={createPageUrl("SearchCourts")}
@@ -135,10 +190,10 @@ export default function Home() {
 
         {courtsLoading ? (
           <LoadingSpinner className="py-12" />
-        ) : courts.length > 0 ? (
+        ) : sortedCourts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courts.map((court) => (
-              <CourtCard key={court.id} court={court} />
+            {sortedCourts.map((court) => (
+              <CourtCard key={court.id} court={court} showDistance={!!userLocation} />
             ))}
           </div>
         ) : (

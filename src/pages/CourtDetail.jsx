@@ -7,7 +7,8 @@ import { es } from "date-fns/locale";
 import {
   MapPin, Phone, Star, Clock, ChevronLeft, ChevronRight,
   Calendar as CalendarIcon, CreditCard, Banknote, Navigation,
-  Share2, Heart, Check, AlertCircle, Download
+  Share2, Heart, Check, AlertCircle, Download, Image, Camera,
+  Wifi, Car, ShowerHead, Coffee, Shirt, Users, Dumbbell, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -287,15 +288,27 @@ export default function CourtDetail() {
                 <p className="mt-4 text-slate-600">{court.description}</p>
               )}
 
-              {/* Amenities */}
+              {/* Amenities with Icons */}
               {court.amenities?.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {court.amenities.map((amenity, idx) => (
-                    <Badge key={idx} variant="secondary" className="bg-slate-100">
-                      <Check className="h-3 w-3 mr-1" />
-                      {amenity}
-                    </Badge>
-                  ))}
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-slate-700 mb-2">Servicios disponibles</p>
+                  <div className="flex flex-wrap gap-3">
+                    {court.amenities.map((amenity, idx) => {
+                      const iconMap = {
+                        "Wifi": Wifi, "WiFi": Wifi, "Estacionamiento": Car, "Parking": Car,
+                        "Duchas": ShowerHead, "Vestuarios": Shirt, "Cafetería": Coffee,
+                        "Cafeteria": Coffee, "Tribuna": Users, "Gimnasio": Dumbbell,
+                        "Iluminación": Lightbulb, "Iluminacion": Lightbulb
+                      };
+                      const Icon = iconMap[amenity] || Check;
+                      return (
+                        <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                          <Icon className="h-4 w-4 text-teal-600" />
+                          <span className="text-sm text-slate-700">{amenity}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -304,6 +317,10 @@ export default function CourtDetail() {
             <Tabs defaultValue="horarios" className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <TabsList className="w-full justify-start rounded-none border-b bg-slate-50 p-1">
                 <TabsTrigger value="horarios" className="flex-1">Horarios</TabsTrigger>
+                <TabsTrigger value="fotos" className="flex-1 flex items-center gap-1">
+                  <Camera className="h-4 w-4" />
+                  Fotos
+                </TabsTrigger>
                 <TabsTrigger value="ubicacion" className="flex-1">Ubicación</TabsTrigger>
                 <TabsTrigger value="resenas" className="flex-1">Reseñas</TabsTrigger>
               </TabsList>
@@ -363,6 +380,34 @@ export default function CourtDetail() {
                 </div>
               </TabsContent>
 
+              <TabsContent value="fotos" className="p-6">
+                <div className="space-y-4">
+                  {images.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {images.map((photo, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentImageIndex(idx)}
+                          className={`relative aspect-[4/3] rounded-xl overflow-hidden group ${currentImageIndex === idx ? 'ring-2 ring-teal-500' : ''}`}
+                        >
+                          <img
+                            src={photo}
+                            alt={`${court.name} - Foto ${idx + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Image className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500">No hay fotos disponibles</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               <TabsContent value="ubicacion" className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -410,27 +455,47 @@ export default function CourtDetail() {
               </TabsContent>
 
               <TabsContent value="resenas" className="p-6">
+                {/* Rating Summary */}
+                {court.average_rating > 0 && (
+                  <div className="flex items-center gap-6 p-4 bg-amber-50 rounded-xl mb-6">
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-amber-600">{court.average_rating.toFixed(1)}</p>
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`h-4 w-4 ${i < Math.round(court.average_rating) ? 'fill-amber-400 text-amber-400' : 'text-amber-200'}`} />
+                        ))}
+                      </div>
+                      <p className="text-sm text-amber-700 mt-1">{court.total_reviews || reviews.length} reseñas</p>
+                    </div>
+                  </div>
+                )}
+
                 {reviews.length > 0 ? (
                   <div className="space-y-4">
                     {reviews.map((review) => (
                       <div key={review.id} className="p-4 bg-slate-50 rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium text-slate-800">{review.user_name || "Usuario"}</p>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating
-                                    ? 'fill-amber-400 text-amber-400'
-                                    : 'text-slate-300'
-                                }`}
-                              />
-                            ))}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                              <span className="text-teal-700 font-semibold">{(review.user_name || "U").charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-800">{review.user_name || "Usuario"}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
                         {review.comment && (
-                          <p className="text-slate-600 text-sm">{review.comment}</p>
+                          <p className="text-slate-600 text-sm mt-2 pl-13">{review.comment}</p>
+                        )}
+                        {review.photo_url && (
+                          <div className="mt-3 pl-13">
+                            <img src={review.photo_url} alt="Foto de reseña" className="w-32 h-24 object-cover rounded-lg" />
+                          </div>
                         )}
                       </div>
                     ))}
