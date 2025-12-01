@@ -27,12 +27,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import UserNotificationCenter from "@/components/notifications/UserNotificationCenter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     loadUser();
@@ -48,6 +51,32 @@ export default function Layout({ children, currentPageName }) {
       setIsLoading(false);
     }
   };
+
+  // User notifications
+  const { data: userNotifications = [] } = useQuery({
+    queryKey: ['user-notifications', user?.email],
+    queryFn: () => base44.entities.Notification.filter({ user_email: user.email }, '-created_date', 50),
+    enabled: !!user?.email,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const markNotificationReadMutation = useMutation({
+    mutationFn: (id) => base44.entities.Notification.update(id, { is_read: true }),
+    onSuccess: () => queryClient.invalidateQueries(['user-notifications'])
+  });
+
+  const markAllNotificationsReadMutation = useMutation({
+    mutationFn: async () => {
+      const unread = userNotifications.filter(n => !n.is_read);
+      await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
+    },
+    onSuccess: () => queryClient.invalidateQueries(['user-notifications'])
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (id) => base44.entities.Notification.delete(id),
+    onSuccess: () => queryClient.invalidateQueries(['user-notifications'])
+  });
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -126,11 +155,19 @@ export default function Layout({ children, currentPageName }) {
             </nav>
 
             {/* User Menu */}
-            <div className="flex items-center gap-3">
-              {!isLoading && (
-                <>
-                  {user ? (
-                    <DropdownMenu>
+                            <div className="flex items-center gap-3">
+                              {!isLoading && user && (
+                                <UserNotificationCenter
+                                  notifications={userNotifications}
+                                  onMarkAsRead={(id) => markNotificationReadMutation.mutate(id)}
+                                  onMarkAllAsRead={() => markAllNotificationsReadMutation.mutate()}
+                                  onDelete={(id) => deleteNotificationMutation.mutate(id)}
+                                />
+                              )}
+                              {!isLoading && (
+                                <>
+                                  {user ? (
+                                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                           <Avatar className="h-10 w-10 border-2 border-teal-100">
