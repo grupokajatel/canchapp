@@ -30,6 +30,7 @@ import CalendarMultiSelect from "@/components/owner/CalendarMultiSelect";
 import ReservationDetailModal from "@/components/owner/ReservationDetailModal";
 import NotificationCenter from "@/components/owner/NotificationCenter";
 import CollaboratorManager from "@/components/owner/CollaboratorManager";
+import CourtPhotoUploader from "@/components/owner/CourtPhotoUploader";
 import { toast } from "sonner";
 
 export default function OwnerDashboard() {
@@ -48,7 +49,7 @@ export default function OwnerDashboard() {
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
-  const [newCourt, setNewCourt] = useState({ name: "", description: "", sport_type: "futbol", address: "", department: "Lima", phone: "", price_per_hour: 50, night_price_per_hour: 70, night_price_enabled: false, opening_hour: 6, closing_hour: 23 });
+  const [newCourt, setNewCourt] = useState({ name: "", description: "", sport_type: "futbol", address: "", department: "Lima", phone: "", price_per_hour: 50, night_price_per_hour: 70, night_price_enabled: false, opening_hour: 6, closing_hour: 23, photos: [] });
   const [manualReservation, setManualReservation] = useState({ user_name: "", user_phone: "", date: format(new Date(), 'yyyy-MM-dd'), start_hour: 8, duration_hours: 1, payment_method: "efectivo", notes: "" });
   const [newProduct, setNewProduct] = useState({ name: "", description: "", price: 0, stock: 0, category: "bebidas" });
   const [newSale, setNewSale] = useState({ product_id: "", quantity: 1, customer_name: "", payment_method: "efectivo" });
@@ -502,6 +503,10 @@ export default function OwnerDashboard() {
                         <div><Label>Precio nocturno</Label><Input type="number" value={newCourt.night_price_per_hour} onChange={(e) => setNewCourt({...newCourt, night_price_per_hour: parseInt(e.target.value)})} className="mt-1" /></div>
                       </div>
                       <div className="flex items-center justify-between"><Label>Habilitar precio nocturno</Label><Switch checked={newCourt.night_price_enabled} onCheckedChange={(v) => setNewCourt({...newCourt, night_price_enabled: v})} /></div>
+                      <CourtPhotoUploader 
+                        photos={newCourt.photos} 
+                        onPhotosChange={(photos) => setNewCourt({...newCourt, photos})} 
+                      />
                     </div>
                     <div className="flex gap-3">
                       <Button variant="outline" className="flex-1" onClick={() => setShowCreateCourtDialog(false)}>Cancelar</Button>
