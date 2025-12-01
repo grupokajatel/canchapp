@@ -108,7 +108,7 @@ export default function CourtDetail() {
       await NotificationService.notifyOwner(court.owner_id, 'new_reservation', {
         userName: data.user_name,
         courtName: court.name,
-        date: formatDate(new Date(data.date), "d 'de' MMMM", { locale: es }),
+        date: format(new Date(data.date), "d 'de' MMMM", { locale: es }),
         time: `${data.start_hour}:00`,
         referenceId: reservation.id,
         referenceType: "reservation"
@@ -246,7 +246,7 @@ export default function CourtDetail() {
     await NotificationService.notifyOwner(court.owner_id, 'new_reservation', {
       userName: user.full_name,
       courtName: court.name,
-      date: formatDate(new Date(pendingReservation.date), "d 'de' MMMM", { locale: es }),
+      date: format(new Date(pendingReservation.date), "d 'de' MMMM", { locale: es }),
       time: `${pendingReservation.start_hour}:00`,
       referenceId: reservation.id,
       referenceType: "reservation"
