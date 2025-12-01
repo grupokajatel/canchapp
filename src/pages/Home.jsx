@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import CourtCard from "@/components/courts/CourtCard";
+import VenueCard from "@/components/courts/VenueCard";
 import MatchCard from "@/components/community/MatchCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
@@ -60,18 +61,38 @@ export default function Home() {
     queryFn: () => base44.entities.Court.filter({ status: "approved", is_active: true }, '-average_rating', 20),
   });
 
-  // Sort courts by distance if user location available
-  const sortedCourts = React.useMemo(() => {
-    if (!userLocation || courts.length === 0) return courts.slice(0, 6);
+  // Group courts by owner/address (venue) and sort by distance
+  const venues = React.useMemo(() => {
+    if (courts.length === 0) return [];
     
-    return [...courts]
-      .map(court => ({
-        ...court,
-        distance: court.latitude && court.longitude 
-          ? calculateDistance(userLocation.lat, userLocation.lng, court.latitude, court.longitude)
-          : 999
+    // Add distance to each court
+    const courtsWithDistance = courts.map(court => ({
+      ...court,
+      distance: userLocation && court.latitude && court.longitude 
+        ? calculateDistance(userLocation.lat, userLocation.lng, court.latitude, court.longitude)
+        : 999
+    }));
+
+    // Group by owner_id (same owner = same venue)
+    const venueMap = new Map();
+    courtsWithDistance.forEach(court => {
+      const key = court.owner_id;
+      if (!venueMap.has(key)) {
+        venueMap.set(key, { courts: [], mainCourt: court });
+      }
+      venueMap.get(key).courts.push(court);
+    });
+
+    // Convert to array and sort by best court distance
+    return Array.from(venueMap.values())
+      .map(venue => ({
+        ...venue,
+        mainCourt: {
+          ...venue.courts[0],
+          distance: Math.min(...venue.courts.map(c => c.distance))
+        }
       }))
-      .sort((a, b) => a.distance - b.distance)
+      .sort((a, b) => a.mainCourt.distance - b.mainCourt.distance)
       .slice(0, 6);
   }, [courts, userLocation]);
 
@@ -190,10 +211,14 @@ export default function Home() {
 
         {courtsLoading ? (
           <LoadingSpinner className="py-12" />
-        ) : sortedCourts.length > 0 ? (
+        ) : venues.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedCourts.map((court) => (
-              <CourtCard key={court.id} court={court} showDistance={!!userLocation} />
+            {venues.map((venue) => (
+              venue.courts.length > 1 ? (
+                <VenueCard key={venue.mainCourt.owner_id} venue={venue} showDistance={!!userLocation} />
+              ) : (
+                <CourtCard key={venue.mainCourt.id} court={venue.mainCourt} showDistance={!!userLocation} />
+              )
             ))}
           </div>
         ) : (
