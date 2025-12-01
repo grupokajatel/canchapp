@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TimeSlotPicker from "@/components/reservation/TimeSlotPicker";
+import UserWeeklyCalendar from "@/components/calendar/UserWeeklyCalendar";
 import PaymentModal from "@/components/reservation/PaymentModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import NotificationService from "@/components/notifications/NotificationService";
@@ -47,6 +48,7 @@ export default function CourtDetail() {
   const [pendingReservation, setPendingReservation] = useState(null);
   const [user, setUser] = useState(null);
   const [reservationDetails, setReservationDetails] = useState(null);
+  const [calendarView, setCalendarView] = useState("day"); // day or week
 
   const queryClient = useQueryClient();
 
@@ -87,7 +89,22 @@ export default function CourtDetail() {
       court_id: courtId,
       date: format(selectedDate, 'yyyy-MM-dd')
     }),
-    enabled: !!courtId,
+    enabled: !!courtId && calendarView === "day",
+  });
+
+  // Fetch all reservations for weekly view (next 2 weeks)
+  const { data: weeklyReservations = [] } = useQuery({
+    queryKey: ['weekly-reservations', courtId],
+    queryFn: async () => {
+      const today = new Date();
+      const twoWeeksLater = addDays(today, 14);
+      const allRes = await base44.entities.Reservation.filter({ court_id: courtId });
+      return allRes.filter(r => {
+        const resDate = new Date(r.date);
+        return resDate >= today && resDate <= twoWeeksLater;
+      });
+    },
+    enabled: !!courtId && calendarView === "week",
   });
 
   const { data: paymentConfig } = useQuery({
@@ -156,6 +173,27 @@ export default function CourtDetail() {
       }
       return [...prev, hour].sort((a, b) => a - b);
     });
+  };
+
+  // Handler for weekly calendar
+  const handleWeeklySlotSelect = (key, date, hour) => {
+    // Update selected date and slots based on weekly calendar selection
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const currentDateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    if (dateStr !== currentDateStr) {
+      // If selecting a different date, reset slots and set new date
+      setSelectedDate(date);
+      setSelectedSlots([hour]);
+    } else {
+      // Same date, toggle slot
+      setSelectedSlots(prev => {
+        if (prev.includes(hour)) {
+          return prev.filter(h => h !== hour);
+        }
+        return [...prev, hour].sort((a, b) => a - b);
+      });
+    }
   };
 
   const calculateTotal = () => {
@@ -418,56 +456,101 @@ export default function CourtDetail() {
 
               <TabsContent value="horarios" className="p-6">
                 <div className="space-y-6">
-                  {/* Date Picker */}
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">Selecciona una fecha</Label>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {[...Array(14)].map((_, idx) => {
-                        const date = addDays(new Date(), idx);
-                        const isSelected = format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              setSelectedDate(date);
-                              setSelectedSlots([]);
-                            }}
-                            className={`flex-shrink-0 p-3 rounded-xl text-center transition-all min-w-[70px] ${
-                              isSelected 
-                                ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/30' 
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            <p className="text-xs font-medium opacity-80">
-                              {format(date, 'EEE', { locale: es })}
-                            </p>
-                            <p className="text-xl font-bold">{format(date, 'd')}</p>
-                            <p className="text-xs opacity-80">
-                              {format(date, 'MMM', { locale: es })}
-                            </p>
-                          </button>
-                        );
-                      })}
+                  {/* View Toggle */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Selecciona horarios</Label>
+                    <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setCalendarView("day");
+                          setSelectedSlots([]);
+                        }}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          calendarView === "day" 
+                            ? "bg-teal-600 text-white" 
+                            : "bg-white text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        Por día
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCalendarView("week");
+                          setSelectedSlots([]);
+                        }}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          calendarView === "week" 
+                            ? "bg-teal-600 text-white" 
+                            : "bg-white text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        Semana
+                      </button>
                     </div>
                   </div>
 
-                  {/* Time Slots */}
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">
-                      Horarios disponibles - {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
-                    </Label>
-                    <TimeSlotPicker
-                      date={selectedDate}
-                      openingHour={court.opening_hour || 6}
-                      closingHour={court.closing_hour || 23}
-                      reservations={reservations}
-                      selectedSlots={selectedSlots}
-                      onSlotSelect={handleSlotSelect}
-                      pricePerHour={court.price_per_hour}
-                      nightPricePerHour={court.night_price_per_hour}
-                      nightPriceEnabled={court.night_price_enabled}
+                  {calendarView === "day" ? (
+                    <>
+                      {/* Date Picker */}
+                      <div>
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                          {[...Array(14)].map((_, idx) => {
+                            const date = addDays(new Date(), idx);
+                            const isSelected = format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setSelectedDate(date);
+                                  setSelectedSlots([]);
+                                }}
+                                className={`flex-shrink-0 p-3 rounded-xl text-center transition-all min-w-[70px] ${
+                                  isSelected 
+                                    ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/30' 
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                <p className="text-xs font-medium opacity-80">
+                                  {format(date, 'EEE', { locale: es })}
+                                </p>
+                                <p className="text-xl font-bold">{format(date, 'd')}</p>
+                                <p className="text-xs opacity-80">
+                                  {format(date, 'MMM', { locale: es })}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Time Slots */}
+                      <div>
+                        <Label className="text-base font-semibold mb-3 block">
+                          Horarios disponibles - {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+                        </Label>
+                        <TimeSlotPicker
+                          date={selectedDate}
+                          openingHour={court.opening_hour || 6}
+                          closingHour={court.closing_hour || 23}
+                          reservations={reservations}
+                          selectedSlots={selectedSlots}
+                          onSlotSelect={handleSlotSelect}
+                          pricePerHour={court.price_per_hour}
+                          nightPricePerHour={court.night_price_per_hour}
+                          nightPriceEnabled={court.night_price_enabled}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <UserWeeklyCalendar
+                      court={court}
+                      reservations={weeklyReservations}
+                      selectedSlots={selectedSlots.map(h => `${format(selectedDate, 'yyyy-MM-dd')}_${h}`)}
+                      onSlotSelect={handleWeeklySlotSelect}
+                      selectedDate={selectedDate}
+                      onDateChange={setSelectedDate}
                     />
-                  </div>
+                  )}
                 </div>
               </TabsContent>
 
