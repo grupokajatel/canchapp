@@ -32,6 +32,8 @@ import ReservationDetailModal from "@/components/owner/ReservationDetailModal";
 import NotificationCenter from "@/components/owner/NotificationCenter";
 import CollaboratorManager from "@/components/owner/CollaboratorManager";
 import CourtPhotoUploader from "@/components/owner/CourtPhotoUploader";
+import CourtEditDialog from "@/components/owner/CourtEditDialog";
+import PendingReservationCard from "@/components/owner/PendingReservationCard";
 import PaymentConfigManager from "@/components/owner/PaymentConfigManager";
 import PaymentHistory from "@/components/owner/PaymentHistory";
 import NotificationService from "@/components/notifications/NotificationService";
@@ -53,6 +55,7 @@ export default function OwnerDashboard() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [editingCourt, setEditingCourt] = useState(null);
   
   const [newCourt, setNewCourt] = useState({ name: "", description: "", sport_type: "futbol", address: "", department: "Lima", phone: "", price_per_hour: 50, night_price_per_hour: 70, night_price_enabled: false, opening_hour: 6, closing_hour: 23, photos: [] });
   const [manualReservation, setManualReservation] = useState({ user_name: "", user_phone: "", date: format(new Date(), 'yyyy-MM-dd'), start_hour: 8, duration_hours: 1, payment_method: "efectivo", notes: "" });
@@ -158,6 +161,15 @@ export default function OwnerDashboard() {
   const createCourtMutation = useMutation({
     mutationFn: (data) => base44.entities.Court.create({ ...data, owner_id: user.id }),
     onSuccess: () => { queryClient.invalidateQueries(['owner-courts']); setShowCreateCourtDialog(false); toast.success("Cancha creada"); }
+  });
+
+  const updateCourtMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Court.update(id, data),
+    onSuccess: () => { 
+      queryClient.invalidateQueries(['owner-courts']); 
+      setEditingCourt(null); 
+      toast.success("Cancha actualizada"); 
+    }
   });
 
   const updateReservationMutation = useMutation({
@@ -466,22 +478,23 @@ export default function OwnerDashboard() {
                 <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-slate-500">Ventas Productos</p><p className="text-3xl font-bold text-purple-600">S/ {totalSalesIncome}</p></div><div className="p-3 bg-purple-100 rounded-xl"><ShoppingCart className="h-6 w-6 text-purple-600" /></div></div></CardContent></Card>
               </div>
               {pendingReservations.length > 0 && (
-                <Card>
-                  <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-amber-500" />Reservas Pendientes</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {pendingReservations.slice(0, 5).map(reservation => (
-                        <div key={reservation.id} className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-100">
-                          <div><p className="font-medium text-slate-800">{reservation.user_name}</p><p className="text-sm text-slate-500">{reservation.court_name} • {format(new Date(reservation.date), "d MMM", { locale: es })} • {reservation.start_hour}:00</p></div>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "rejected" }, reservation })}><X className="h-4 w-4" /></Button>
-                                                                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "accepted" }, reservation })}><Check className="h-4 w-4" /></Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-500" />
+                    Reservas Pendientes ({pendingReservations.length})
+                  </h2>
+                  <div className="space-y-4">
+                    {pendingReservations.slice(0, 5).map(reservation => (
+                      <PendingReservationCard
+                        key={reservation.id}
+                        reservation={reservation}
+                        onAccept={(r) => updateReservationMutation.mutate({ id: r.id, data: { status: "accepted" }, reservation: r })}
+                        onReject={(r) => updateReservationMutation.mutate({ id: r.id, data: { status: "rejected" }, reservation: r })}
+                        isLoading={updateReservationMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -645,17 +658,71 @@ export default function OwnerDashboard() {
                 </Dialog>
               </div>
               {courts.length === 0 ? <EmptyState icon={Building2} title="Sin canchas" description="Registra tu primera cancha" /> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {courts.map(court => (
-                    <Card key={court.id}><CardContent className="p-6">
-                      <div className="flex items-start justify-between"><div><h3 className="font-semibold text-lg">{court.name}</h3><p className="text-sm text-slate-500">{court.address}</p></div>
-                        <Badge className={court.status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>{court.status === "approved" ? "Aprobada" : "Pendiente"}</Badge>
+                    <Card key={court.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      {/* Court Image */}
+                      <div className="relative h-48 bg-slate-100">
+                        {court.photos?.[0] ? (
+                          <img src={court.photos[0]} alt={court.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <Camera className="h-12 w-12" />
+                          </div>
+                        )}
+                        <Badge className={`absolute top-3 right-3 ${court.status === "approved" ? "bg-green-500" : "bg-amber-500"}`}>
+                          {court.status === "approved" ? "Aprobada" : "Pendiente"}
+                        </Badge>
+                        {court.photos?.length > 1 && (
+                          <Badge className="absolute bottom-3 right-3 bg-black/60 text-white">
+                            <Camera className="h-3 w-3 mr-1" />
+                            {court.photos.length} fotos
+                          </Badge>
+                        )}
                       </div>
-                      <div className="mt-4 flex items-center gap-4 text-sm text-slate-600"><span>S/ {court.price_per_hour}/h</span><span>{court.opening_hour || 6}:00 - {court.closing_hour || 23}:00</span></div>
-                    </CardContent></Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg text-slate-800">{court.name}</h3>
+                            <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {court.address}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                          <Badge variant="outline" className="capitalize">{court.sport_type}</Badge>
+                          <span className="text-teal-600 font-semibold">S/ {court.price_per_hour}/h</span>
+                          <span className="text-slate-500">{court.opening_hour || 6}:00 - {court.closing_hour || 23}:00</span>
+                        </div>
+                        {court.amenities?.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {court.amenities.slice(0, 4).map(a => (
+                              <Badge key={a} variant="secondary" className="text-xs">{a}</Badge>
+                            ))}
+                            {court.amenities.length > 4 && <Badge variant="secondary" className="text-xs">+{court.amenities.length - 4}</Badge>}
+                          </div>
+                        )}
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <Button variant="outline" className="w-full" onClick={() => setEditingCourt(court)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar cancha
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
+              
+              {/* Court Edit Dialog */}
+              <CourtEditDialog
+                court={editingCourt}
+                open={!!editingCourt}
+                onClose={() => setEditingCourt(null)}
+                onSave={(id, data) => updateCourtMutation.mutate({ id, data })}
+                isLoading={updateCourtMutation.isPending}
+              />
             </div>
           )}
 
