@@ -8,7 +8,8 @@ import {
   MapPin, Phone, Star, Clock, ChevronLeft, ChevronRight,
   Calendar as CalendarIcon, CreditCard, Banknote, Navigation,
   Share2, Heart, Check, AlertCircle, Download, Image, Camera,
-  Wifi, Car, ShowerHead, Coffee, Shirt, Users, Dumbbell, Lightbulb
+  Wifi, Car, ShowerHead, Coffee, Shirt, Users, Dumbbell, Lightbulb,
+  Building2, Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +115,13 @@ export default function CourtDetail() {
       const configs = await base44.entities.PaymentConfig.filter({ owner_id: court.owner_id });
       return configs[0] || null;
     },
+    enabled: !!court?.owner_id,
+  });
+
+  // Fetch other courts from the same owner (venue)
+  const { data: venueCourts = [] } = useQuery({
+    queryKey: ['venue-courts', court?.owner_id],
+    queryFn: () => base44.entities.Court.filter({ owner_id: court.owner_id, status: "approved", is_active: true }),
     enabled: !!court?.owner_id,
   });
 
@@ -444,12 +452,18 @@ export default function CourtDetail() {
 
             {/* Tabs */}
             <Tabs defaultValue="horarios" className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <TabsList className="w-full justify-start rounded-none border-b bg-slate-50 p-1">
+              <TabsList className="w-full justify-start rounded-none border-b bg-slate-50 p-1 flex-wrap">
                 <TabsTrigger value="horarios" className="flex-1">Horarios</TabsTrigger>
                 <TabsTrigger value="fotos" className="flex-1 flex items-center gap-1">
                   <Camera className="h-4 w-4" />
                   Fotos
                 </TabsTrigger>
+                {venueCourts.length > 1 && (
+                  <TabsTrigger value="canchas" className="flex-1 flex items-center gap-1">
+                    <Layers className="h-4 w-4" />
+                    Canchas ({venueCourts.length})
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="ubicacion" className="flex-1">Ubicación</TabsTrigger>
                 <TabsTrigger value="resenas" className="flex-1">Reseñas</TabsTrigger>
               </TabsList>
@@ -581,6 +595,86 @@ export default function CourtDetail() {
                   )}
                 </div>
               </TabsContent>
+
+              {/* Other Courts Tab */}
+              {venueCourts.length > 1 && (
+                <TabsContent value="canchas" className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <Building2 className="h-5 w-5 text-teal-600" />
+                      <p className="font-medium">Este local cuenta con {venueCourts.length} canchas disponibles</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {venueCourts.map(otherCourt => (
+                        <a
+                          key={otherCourt.id}
+                          href={createPageUrl(`CourtDetail?id=${otherCourt.id}`)}
+                          className={`block rounded-xl border-2 overflow-hidden transition-all hover:shadow-lg ${otherCourt.id === courtId ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-teal-300'}`}
+                        >
+                          {/* Court Image */}
+                          <div className="relative h-40">
+                            <img
+                              src={otherCourt.photos?.[0] || "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800"}
+                              alt={otherCourt.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                            
+                            {otherCourt.id === courtId && (
+                              <Badge className="absolute top-2 left-2 bg-teal-600">
+                                <Check className="h-3 w-3 mr-1" />
+                                Viendo ahora
+                              </Badge>
+                            )}
+                            
+                            <Badge className="absolute top-2 right-2 bg-white/90 text-slate-700">
+                              {sportLabels[otherCourt.sport_type]}
+                            </Badge>
+                            
+                            <div className="absolute bottom-2 right-2 bg-teal-600 text-white px-3 py-1 rounded-lg font-semibold text-sm">
+                              S/ {otherCourt.price_per_hour}/h
+                            </div>
+                          </div>
+                          
+                          {/* Court Info */}
+                          <div className="p-4">
+                            <h3 className="font-semibold text-slate-800">{otherCourt.name}</h3>
+                            <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                {otherCourt.opening_hour || 6}:00 - {otherCourt.closing_hour || 23}:00
+                              </span>
+                              {otherCourt.average_rating > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                  {otherCourt.average_rating.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Photos preview */}
+                            {otherCourt.photos?.length > 1 && (
+                              <div className="flex gap-1 mt-3">
+                                {otherCourt.photos.slice(1, 4).map((photo, idx) => (
+                                  <div key={idx} className="w-12 h-12 rounded-lg overflow-hidden">
+                                    <img src={photo} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                ))}
+                                {otherCourt.photos.length > 4 && (
+                                  <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-medium">
+                                    +{otherCourt.photos.length - 4}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              )}
 
               <TabsContent value="ubicacion" className="p-6">
                 <div className="space-y-4">
