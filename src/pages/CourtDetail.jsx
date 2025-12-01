@@ -33,8 +33,6 @@ import PaymentModal from "@/components/reservation/PaymentModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import NotificationService from "@/components/notifications/NotificationService";
 import { toast } from "sonner";
-import { format as formatDate } from "date-fns";
-import { es } from "date-fns/locale";
 
 export default function CourtDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
