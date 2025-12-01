@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import CalendarMultiSelect from "@/components/owner/CalendarMultiSelect";
+import OwnerConsolidatedCalendar from "@/components/calendar/OwnerConsolidatedCalendar";
 import ReservationDetailModal from "@/components/owner/ReservationDetailModal";
 import NotificationCenter from "@/components/owner/NotificationCenter";
 import CollaboratorManager from "@/components/owner/CollaboratorManager";
@@ -42,6 +43,7 @@ export default function OwnerDashboard() {
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("day");
+  const [calendarMode, setCalendarMode] = useState("single"); // single or consolidated
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedSlots, setSelectedSlots] = useState([]);
@@ -491,22 +493,50 @@ export default function OwnerDashboard() {
                 <EmptyState icon={Building2} title="No tienes canchas" description="Crea tu primera cancha" action={<Button onClick={() => setShowCreateCourtDialog(true)} className="bg-teal-600"><Plus className="h-4 w-4 mr-2" />Crear Cancha</Button>} />
               ) : (
                 <>
+                  {/* Calendar Mode Toggle */}
                   <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Select value={selectedCourt?.id} onValueChange={(id) => { setSelectedCourt(courts.find(c => c.id === id)); setSelectedSlots([]); }}>
-                        <SelectTrigger className="w-full sm:w-64 bg-white"><SelectValue placeholder="Selecciona cancha" /></SelectTrigger>
-                        <SelectContent>{courts.map(court => <SelectItem key={court.id} value={court.id}>{court.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Tabs value={viewMode} onValueChange={setViewMode} className="bg-white rounded-lg border">
-                        <TabsList className="h-10">
-                          <TabsTrigger value="day" className="px-4"><CalendarDays className="h-4 w-4 mr-1" />Día</TabsTrigger>
-                          <TabsTrigger value="week" className="px-4"><CalendarRange className="h-4 w-4 mr-1" />Semana</TabsTrigger>
-                          <TabsTrigger value="month" className="px-4"><Calendar className="h-4 w-4 mr-1" />Mes</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
+                      <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white">
+                        <button
+                          onClick={() => setCalendarMode("single")}
+                          className={`px-4 py-2 text-sm font-medium transition-colors ${
+                            calendarMode === "single" 
+                              ? "bg-teal-600 text-white" 
+                              : "bg-white text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Por Cancha
+                        </button>
+                        <button
+                          onClick={() => setCalendarMode("consolidated")}
+                          className={`px-4 py-2 text-sm font-medium transition-colors ${
+                            calendarMode === "consolidated" 
+                              ? "bg-teal-600 text-white" 
+                              : "bg-white text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Vista General
+                        </button>
+                      </div>
+                      
+                      {calendarMode === "single" && (
+                        <>
+                          <Select value={selectedCourt?.id} onValueChange={(id) => { setSelectedCourt(courts.find(c => c.id === id)); setSelectedSlots([]); }}>
+                            <SelectTrigger className="w-full sm:w-64 bg-white"><SelectValue placeholder="Selecciona cancha" /></SelectTrigger>
+                            <SelectContent>{courts.map(court => <SelectItem key={court.id} value={court.id}>{court.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Tabs value={viewMode} onValueChange={setViewMode} className="bg-white rounded-lg border">
+                            <TabsList className="h-10">
+                              <TabsTrigger value="day" className="px-4"><CalendarDays className="h-4 w-4 mr-1" />Día</TabsTrigger>
+                              <TabsTrigger value="week" className="px-4"><CalendarRange className="h-4 w-4 mr-1" />Semana</TabsTrigger>
+                              <TabsTrigger value="month" className="px-4"><Calendar className="h-4 w-4 mr-1" />Mes</TabsTrigger>
+                            </TabsList>
+                          </Tabs>
+                        </>
+                      )}
                     </div>
                     <div className="flex gap-2">
-                      {selectedSlots.length > 0 && (
+                      {selectedSlots.length > 0 && calendarMode === "single" && (
                         <Button onClick={handleCreateFromSelected} className="bg-teal-600 hover:bg-teal-700">
                           <Plus className="h-4 w-4 mr-2" />Crear Reserva ({selectedSlots.length}h)
                         </Button>
@@ -537,26 +567,43 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center gap-4 bg-white rounded-xl border p-3">
-                    <Button variant="ghost" size="icon" onClick={() => navigateDate(-1)}><ChevronLeft className="h-5 w-5" /></Button>
-                    <span className="text-lg font-semibold text-slate-800 min-w-[280px] text-center capitalize">{getDateLabel()}</span>
-                    <Button variant="ghost" size="icon" onClick={() => navigateDate(1)}><ChevronRight className="h-5 w-5" /></Button>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>Hoy</Button>
-                  </div>
+                  {calendarMode === "single" ? (
+                    <>
+                      <div className="flex items-center justify-center gap-4 bg-white rounded-xl border p-3">
+                        <Button variant="ghost" size="icon" onClick={() => navigateDate(-1)}><ChevronLeft className="h-5 w-5" /></Button>
+                        <span className="text-lg font-semibold text-slate-800 min-w-[280px] text-center capitalize">{getDateLabel()}</span>
+                        <Button variant="ghost" size="icon" onClick={() => navigateDate(1)}><ChevronRight className="h-5 w-5" /></Button>
+                        <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>Hoy</Button>
+                      </div>
 
-                  <Card><CardContent className="p-6">
-                    <CalendarMultiSelect
-                      courts={courts}
-                      selectedCourt={selectedCourt}
-                      selectedDate={selectedDate}
-                      viewMode={viewMode}
-                      reservations={reservations}
-                      selectedSlots={selectedSlots}
-                      onSlotToggle={handleSlotToggle}
-                      onSlotClick={(date) => { setSelectedDate(date); setViewMode("day"); }}
-                      onReservationClick={setSelectedReservation}
-                    />
-                  </CardContent></Card>
+                      <Card><CardContent className="p-6">
+                        <CalendarMultiSelect
+                          courts={courts}
+                          selectedCourt={selectedCourt}
+                          selectedDate={selectedDate}
+                          viewMode={viewMode}
+                          reservations={reservations}
+                          selectedSlots={selectedSlots}
+                          onSlotToggle={handleSlotToggle}
+                          onSlotClick={(date) => { setSelectedDate(date); setViewMode("day"); }}
+                          onReservationClick={setSelectedReservation}
+                        />
+                      </CardContent></Card>
+                    </>
+                  ) : (
+                    <Card><CardContent className="p-6">
+                      <OwnerConsolidatedCalendar
+                        courts={courts}
+                        reservations={allReservations}
+                        onReservationClick={setSelectedReservation}
+                        onDayClick={(date) => { 
+                          setSelectedDate(date); 
+                          setViewMode("day"); 
+                          setCalendarMode("single"); 
+                        }}
+                      />
+                    </CardContent></Card>
+                  )}
                 </>
               )}
             </div>
