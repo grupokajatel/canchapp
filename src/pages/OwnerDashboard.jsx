@@ -8,7 +8,8 @@ import { es } from "date-fns/locale";
 import {
   LayoutDashboard, Calendar, Building2, BarChart3, Plus, ChevronLeft, ChevronRight,
   Check, X, Clock, DollarSign, Users, Menu, LogOut, Home, Package, ShoppingCart,
-  Edit, Trash2, CalendarDays, CalendarRange, Bell, FileSpreadsheet, AlertCircle, CreditCard, Settings
+  Edit, Trash2, CalendarDays, CalendarRange, Bell, FileSpreadsheet, AlertCircle, CreditCard, Settings,
+  Camera, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
