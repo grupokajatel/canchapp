@@ -865,7 +865,7 @@ export default function CourtDetail() {
               <div className="bg-slate-50 rounded-xl p-4 text-left mb-6">
                 <p className="font-semibold text-slate-800">{court?.name}</p>
                 <p className="text-sm text-slate-500 mt-1">
-                  {format(new Date(reservationDetails.date), "EEEE d 'de' MMMM", { locale: es })}
+                  {format(new Date(reservationDetails.date + 'T00:00:00'), "EEEE d 'de' MMMM", { locale: es })}
                 </p>
                 <p className="text-sm text-slate-500">
                   {reservationDetails.start_hour}:00 - {reservationDetails.end_hour}:00
