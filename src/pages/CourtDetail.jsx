@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TimeSlotPicker from "@/components/reservation/TimeSlotPicker";
+import PaymentModal from "@/components/reservation/PaymentModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 
@@ -41,6 +42,8 @@ export default function CourtDetail() {
   const [notes, setNotes] = useState("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingReservation, setPendingReservation] = useState(null);
   const [user, setUser] = useState(null);
   const [reservationDetails, setReservationDetails] = useState(null);
 
@@ -84,6 +87,16 @@ export default function CourtDetail() {
       date: format(selectedDate, 'yyyy-MM-dd')
     }),
     enabled: !!courtId,
+  });
+
+  const { data: paymentConfig } = useQuery({
+    queryKey: ['court-payment-config', court?.owner_id],
+    queryFn: async () => {
+      if (!court?.owner_id) return null;
+      const configs = await base44.entities.PaymentConfig.filter({ owner_id: court.owner_id });
+      return configs[0] || null;
+    },
+    enabled: !!court?.owner_id,
   });
 
   const createReservationMutation = useMutation({
@@ -177,7 +190,50 @@ export default function CourtDetail() {
       status: "pending"
     };
 
-    createReservationMutation.mutate(reservationData);
+    // Check if payment is required upfront
+    if (paymentConfig?.require_payment_upfront) {
+      setPendingReservation(reservationData);
+      setShowConfirmDialog(false);
+      setShowPaymentModal(true);
+    } else {
+      createReservationMutation.mutate(reservationData);
+    }
+  };
+
+  const handlePaymentComplete = async ({ method, proofUrl, paymentStatus, reservationStatus }) => {
+    if (!pendingReservation) return;
+
+    // Create reservation with updated status
+    const reservationData = {
+      ...pendingReservation,
+      payment_method: method,
+      status: reservationStatus
+    };
+
+    const reservation = await base44.entities.Reservation.create(reservationData);
+
+    // Create payment record
+    await base44.entities.Payment.create({
+      reservation_id: reservation.id,
+      court_id: courtId,
+      court_name: court.name,
+      user_id: user.id,
+      user_name: user.full_name,
+      user_email: user.email,
+      owner_id: court.owner_id,
+      amount: pendingReservation.total_price,
+      payment_method: method,
+      status: paymentStatus,
+      payment_proof_url: proofUrl || null
+    });
+
+    setReservationDetails(reservation);
+    setShowPaymentModal(false);
+    setShowSuccessDialog(true);
+    setSelectedSlots([]);
+    setPendingReservation(null);
+    queryClient.invalidateQueries(['reservations', courtId]);
+    toast.success(paymentStatus === "completed" ? "¡Pago completado!" : "¡Reserva creada!");
   };
 
   const sportLabels = {
@@ -662,6 +718,18 @@ export default function CourtDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        open={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPendingReservation(null);
+        }}
+        reservation={pendingReservation}
+        paymentConfig={paymentConfig}
+        onPaymentComplete={handlePaymentComplete}
+      />
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
