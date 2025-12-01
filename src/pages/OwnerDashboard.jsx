@@ -33,6 +33,7 @@ import CollaboratorManager from "@/components/owner/CollaboratorManager";
 import CourtPhotoUploader from "@/components/owner/CourtPhotoUploader";
 import PaymentConfigManager from "@/components/owner/PaymentConfigManager";
 import PaymentHistory from "@/components/owner/PaymentHistory";
+import NotificationService from "@/components/notifications/NotificationService";
 import { toast } from "sonner";
 
 export default function OwnerDashboard() {
@@ -158,7 +159,29 @@ export default function OwnerDashboard() {
   });
 
   const updateReservationMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Reservation.update(id, data),
+    mutationFn: async ({ id, data, reservation }) => {
+      await base44.entities.Reservation.update(id, data);
+      
+      // Notify user about status change
+      if (data.status && reservation) {
+        if (data.status === "accepted") {
+          await NotificationService.notifyUser(reservation.user_id, reservation.created_by, 'reservation_confirmed', {
+            courtName: reservation.court_name,
+            date: format(new Date(reservation.date), "d 'de' MMMM", { locale: es }),
+            time: `${reservation.start_hour}:00`,
+            referenceId: id,
+            referenceType: "reservation"
+          });
+        } else if (data.status === "rejected") {
+          await NotificationService.notifyUser(reservation.user_id, reservation.created_by, 'reservation_rejected', {
+            courtName: reservation.court_name,
+            date: format(new Date(reservation.date), "d 'de' MMMM", { locale: es }),
+            referenceId: id,
+            referenceType: "reservation"
+          });
+        }
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['owner-reservations']);
       queryClient.invalidateQueries(['all-owner-reservations']);
@@ -273,12 +296,22 @@ export default function OwnerDashboard() {
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
       await base44.entities.Payment.update(id, { status });
-      // If completed, also update the reservation
-      if (status === "completed") {
-        const payment = payments.find(p => p.id === id);
-        if (payment?.reservation_id) {
+      const payment = payments.find(p => p.id === id);
+      
+      // If completed, also update the reservation and notify user
+      if (status === "completed" && payment) {
+        if (payment.reservation_id) {
           await base44.entities.Reservation.update(payment.reservation_id, { status: "accepted" });
         }
+        
+        // Notify user that payment was confirmed and reservation accepted
+        await NotificationService.notifyUser(payment.user_id, payment.user_email, 'reservation_confirmed', {
+          courtName: payment.court_name,
+          date: "próximamente",
+          time: "",
+          referenceId: payment.reservation_id,
+          referenceType: "reservation"
+        });
       }
     },
     onSuccess: () => { 
@@ -439,8 +472,8 @@ export default function OwnerDashboard() {
                         <div key={reservation.id} className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-100">
                           <div><p className="font-medium text-slate-800">{reservation.user_name}</p><p className="text-sm text-slate-500">{reservation.court_name} • {format(new Date(reservation.date), "d MMM", { locale: es })} • {reservation.start_hour}:00</p></div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "rejected" } })}><X className="h-4 w-4" /></Button>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "accepted" } })}><Check className="h-4 w-4" /></Button>
+                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "rejected" }, reservation })}><X className="h-4 w-4" /></Button>
+                                                                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateReservationMutation.mutate({ id: reservation.id, data: { status: "accepted" }, reservation })}><Check className="h-4 w-4" /></Button>
                           </div>
                         </div>
                       ))}
