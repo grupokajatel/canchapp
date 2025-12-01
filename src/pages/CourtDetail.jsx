@@ -31,7 +31,10 @@ import "leaflet/dist/leaflet.css";
 import TimeSlotPicker from "@/components/reservation/TimeSlotPicker";
 import PaymentModal from "@/components/reservation/PaymentModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import NotificationService from "@/components/notifications/NotificationService";
 import { toast } from "sonner";
+import { format as formatDate } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function CourtDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -100,7 +103,21 @@ export default function CourtDetail() {
   });
 
   const createReservationMutation = useMutation({
-    mutationFn: (data) => base44.entities.Reservation.create(data),
+    mutationFn: async (data) => {
+      const reservation = await base44.entities.Reservation.create(data);
+      
+      // Notify owner about new reservation
+      await NotificationService.notifyOwner(court.owner_id, 'new_reservation', {
+        userName: data.user_name,
+        courtName: court.name,
+        date: formatDate(new Date(data.date), "d 'de' MMMM", { locale: es }),
+        time: `${data.start_hour}:00`,
+        referenceId: reservation.id,
+        referenceType: "reservation"
+      });
+
+      return reservation;
+    },
     onSuccess: (data) => {
       setReservationDetails(data);
       setShowConfirmDialog(false);
@@ -226,6 +243,26 @@ export default function CourtDetail() {
       status: paymentStatus,
       payment_proof_url: proofUrl || null
     });
+
+    // Notify owner about new reservation and payment
+    await NotificationService.notifyOwner(court.owner_id, 'new_reservation', {
+      userName: user.full_name,
+      courtName: court.name,
+      date: formatDate(new Date(pendingReservation.date), "d 'de' MMMM", { locale: es }),
+      time: `${pendingReservation.start_hour}:00`,
+      referenceId: reservation.id,
+      referenceType: "reservation"
+    });
+
+    if (paymentStatus === "completed") {
+      await NotificationService.notifyOwner(court.owner_id, 'payment_received', {
+        userName: user.full_name,
+        courtName: court.name,
+        amount: pendingReservation.total_price,
+        referenceId: reservation.id,
+        referenceType: "reservation"
+      });
+    }
 
     setReservationDetails(reservation);
     setShowPaymentModal(false);
