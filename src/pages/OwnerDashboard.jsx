@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 import {
   LayoutDashboard, Calendar, Building2, BarChart3, Plus, ChevronLeft, ChevronRight,
   Check, X, Clock, DollarSign, Users, Menu, LogOut, Home, Package, ShoppingCart,
-  Edit, Trash2, CalendarDays, CalendarRange, Bell, FileSpreadsheet, AlertCircle
+  Edit, Trash2, CalendarDays, CalendarRange, Bell, FileSpreadsheet, AlertCircle, CreditCard, Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ import ReservationDetailModal from "@/components/owner/ReservationDetailModal";
 import NotificationCenter from "@/components/owner/NotificationCenter";
 import CollaboratorManager from "@/components/owner/CollaboratorManager";
 import CourtPhotoUploader from "@/components/owner/CourtPhotoUploader";
+import PaymentConfigManager from "@/components/owner/PaymentConfigManager";
+import PaymentHistory from "@/components/owner/PaymentHistory";
 import { toast } from "sonner";
 
 export default function OwnerDashboard() {
@@ -131,6 +133,21 @@ export default function OwnerDashboard() {
   const { data: sales = [] } = useQuery({
     queryKey: ['owner-sales', user?.id],
     queryFn: () => base44.entities.Sale.filter({ owner_id: user.id }, '-created_date', 100),
+    enabled: !!user?.id,
+  });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ['owner-payments', user?.id],
+    queryFn: () => base44.entities.Payment.filter({ owner_id: user.id }, '-created_date', 200),
+    enabled: !!user?.id,
+  });
+
+  const { data: paymentConfig } = useQuery({
+    queryKey: ['owner-payment-config', user?.id],
+    queryFn: async () => {
+      const configs = await base44.entities.PaymentConfig.filter({ owner_id: user.id });
+      return configs[0] || null;
+    },
     enabled: !!user?.id,
   });
 
@@ -242,6 +259,36 @@ export default function OwnerDashboard() {
     onSuccess: () => { queryClient.invalidateQueries(['owner-products']); queryClient.invalidateQueries(['owner-sales']); setShowSaleDialog(false); toast.success("Venta registrada"); }
   });
 
+  const savePaymentConfigMutation = useMutation({
+    mutationFn: async (data) => {
+      if (paymentConfig?.id) {
+        return base44.entities.PaymentConfig.update(paymentConfig.id, data);
+      } else {
+        return base44.entities.PaymentConfig.create({ ...data, owner_id: user.id });
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries(['owner-payment-config']); toast.success("Configuración guardada"); }
+  });
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ id, status }) => {
+      await base44.entities.Payment.update(id, { status });
+      // If completed, also update the reservation
+      if (status === "completed") {
+        const payment = payments.find(p => p.id === id);
+        if (payment?.reservation_id) {
+          await base44.entities.Reservation.update(payment.reservation_id, { status: "accepted" });
+        }
+      }
+    },
+    onSuccess: () => { 
+      queryClient.invalidateQueries(['owner-payments']); 
+      queryClient.invalidateQueries(['owner-reservations']);
+      queryClient.invalidateQueries(['all-owner-reservations']);
+      toast.success("Estado actualizado"); 
+    }
+  });
+
   useEffect(() => { if (courts.length > 0 && !selectedCourt) setSelectedCourt(courts[0]); }, [courts]);
 
   if (isLoading) return <LoadingSpinner className="min-h-screen" />;
@@ -322,6 +369,7 @@ export default function OwnerDashboard() {
           { id: "collaborators", icon: Users, label: "Colaboradores" },
           { id: "products", icon: Package, label: "Productos" },
           { id: "sales", icon: ShoppingCart, label: "Ventas" },
+          { id: "payments", icon: CreditCard, label: "Pagos" },
           { id: "reports", icon: BarChart3, label: "Reportes" },
         ].map(item => (
           <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
@@ -355,6 +403,7 @@ export default function OwnerDashboard() {
                 {activeTab === "collaborators" && "Colaboradores"}
                 {activeTab === "products" && "Productos"}
                 {activeTab === "sales" && "Ventas"}
+                {activeTab === "payments" && "Pagos y Configuración"}
                 {activeTab === "reports" && "Reportes"}
               </h1>
             </div>
@@ -609,6 +658,43 @@ export default function OwnerDashboard() {
                     <TableRow key={sale.id}><TableCell>{format(new Date(sale.created_date), "d MMM HH:mm", { locale: es })}</TableCell><TableCell className="font-medium">{sale.product_name}</TableCell><TableCell>{sale.quantity}</TableCell><TableCell className="font-bold text-green-600">S/ {sale.total_price}</TableCell><TableCell><Badge variant="outline" className="capitalize">{sale.payment_method}</Badge></TableCell></TableRow>
                   ))}</TableBody></Table></Card>
               )}
+            </div>
+          )}
+
+          {/* Payments */}
+          {activeTab === "payments" && (
+            <div className="space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Configuración de Pagos
+                  </CardTitle>
+                  <CardDescription>Configura los métodos de pago para tus canchas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PaymentConfigManager 
+                    config={paymentConfig}
+                    onSave={(data) => savePaymentConfigMutation.mutate(data)}
+                    isLoading={savePaymentConfigMutation.isPending}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Historial de Pagos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PaymentHistory 
+                    payments={payments}
+                    onUpdateStatus={(id, status) => updatePaymentStatusMutation.mutate({ id, status })}
+                  />
+                </CardContent>
+              </Card>
             </div>
           )}
 
