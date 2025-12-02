@@ -49,8 +49,17 @@ export default function UserNotificationCenter({
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const getNotificationLink = (notification) => {
+    if (notification.reference_type === "reservation" && notification.reference_id) {
+      return createPageUrl(`MyReservations?highlight=${notification.reference_id}`);
+    }
     if (notification.reference_type === "reservation") {
       return createPageUrl("MyReservations");
+    }
+    if (notification.reference_type === "court" && notification.reference_id) {
+      return createPageUrl(`CourtDetail?id=${notification.reference_id}`);
+    }
+    if (notification.reference_type === "match" && notification.reference_id) {
+      return createPageUrl("Community");
     }
     return null;
   };
