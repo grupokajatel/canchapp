@@ -32,6 +32,8 @@ import "leaflet/dist/leaflet.css";
 import TimeSlotPicker from "@/components/reservation/TimeSlotPicker";
 import UserWeeklyCalendar from "@/components/calendar/UserWeeklyCalendar";
 import PaymentModal from "@/components/reservation/PaymentModal";
+import PhotoGalleryModal from "@/components/courts/PhotoGalleryModal";
+import ChatWidget from "@/components/chat/ChatWidget";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import NotificationService from "@/components/notifications/NotificationService";
 import { toast } from "sonner";
@@ -50,6 +52,8 @@ export default function CourtDetail() {
   const [user, setUser] = useState(null);
   const [reservationDetails, setReservationDetails] = useState(null);
   const [calendarView, setCalendarView] = useState("day"); // day or week
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
   const queryClient = useQueryClient();
 
@@ -333,9 +337,13 @@ export default function CourtDetail() {
         <img
           src={images[currentImageIndex]}
           alt={court.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover cursor-pointer"
+          onClick={() => {
+            setGalleryStartIndex(currentImageIndex);
+            setShowPhotoGallery(true);
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         
         {/* Navigation Arrows */}
         {images.length > 1 && (
@@ -355,19 +363,31 @@ export default function CourtDetail() {
           </>
         )}
 
-        {/* Image Indicators */}
+        {/* Image Indicators & Counter */}
         {images.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {images.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentImageIndex(idx)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  idx === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
+          <>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImageIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                setGalleryStartIndex(currentImageIndex);
+                setShowPhotoGallery(true);
+              }}
+              className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 hover:bg-black/80 transition-colors"
+            >
+              <Camera className="h-4 w-4" />
+              {images.length} fotos
+            </button>
+          </>
         )}
 
         {/* Sport Badge */}
@@ -385,6 +405,14 @@ export default function CourtDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Photo Gallery Modal */}
+      <PhotoGalleryModal
+        photos={images}
+        initialIndex={galleryStartIndex}
+        open={showPhotoGallery}
+        onClose={() => setShowPhotoGallery(false)}
+      />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
@@ -988,6 +1016,17 @@ export default function CourtDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Chat Widget */}
+      {user && court && (
+        <ChatWidget
+          courtId={courtId}
+          courtName={court.name}
+          ownerId={court.owner_id}
+          ownerName="Dueño"
+          currentUser={user}
+        />
+      )}
     </div>
   );
 }
