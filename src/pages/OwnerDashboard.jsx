@@ -53,7 +53,7 @@ export default function OwnerDashboard() {
   const [viewMode, setViewMode] = useState("day");
   const [calendarMode, setCalendarMode] = useState("single"); // single or consolidated
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("calendar");
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showManualReservationDialog, setShowManualReservationDialog] = useState(false);
@@ -479,19 +479,17 @@ export default function OwnerDashboard() {
       </div>
       <nav className="flex-1 p-4 space-y-1">
         {[
-          { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
           { id: "calendar", icon: Calendar, label: "Calendario", badge: pendingReservations.length },
           { id: "courts", icon: Building2, label: "Mis Canchas" },
+          { id: "tienda", icon: ShoppingCart, label: "Tienda" },
           { id: "collaborators", icon: Users, label: "Colaboradores" },
-          { id: "products", icon: Package, label: "Productos" },
-          { id: "sales", icon: ShoppingCart, label: "Ventas" },
           { id: "payments", icon: CreditCard, label: "Pagos" },
           { id: "history", icon: FileSpreadsheet, label: "Historial" },
-                { id: "analytics", icon: TrendingUp, label: "Analíticas" },
-                { id: "pricing", icon: DollarSign, label: "Precios" },
-                { id: "promos", icon: Tag, label: "Promociones" },
-                { id: "reviews", icon: Star, label: "Reseñas" },
-                { id: "reports", icon: BarChart3, label: "Reportes" },
+          { id: "analytics", icon: TrendingUp, label: "Analíticas" },
+          { id: "pricing", icon: DollarSign, label: "Precios" },
+          { id: "promos", icon: Tag, label: "Promociones" },
+          { id: "reviews", icon: Star, label: "Reseñas" },
+          { id: "reports", icon: BarChart3, label: "Reportes" },
         ].map(item => (
           <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? "bg-teal-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
@@ -500,7 +498,7 @@ export default function OwnerDashboard() {
           </button>
         ))}
       </nav>
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 space-y-1">
         <Link to={createPageUrl("Home")}><Button variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800"><Home className="h-4 w-4 mr-2" />Volver al inicio</Button></Link>
         <Button variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800" onClick={() => base44.auth.logout()}><LogOut className="h-4 w-4 mr-2" />Cerrar sesión</Button>
       </div>
@@ -518,12 +516,10 @@ export default function OwnerDashboard() {
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
               <h1 className="text-lg font-semibold text-slate-800">
-                {activeTab === "dashboard" && "Dashboard"}
                 {activeTab === "calendar" && "Calendario de Reservas"}
                 {activeTab === "courts" && "Mis Canchas"}
+                {activeTab === "tienda" && "Tienda"}
                 {activeTab === "collaborators" && "Colaboradores"}
-                {activeTab === "products" && "Productos"}
-                {activeTab === "sales" && "Ventas"}
                 {activeTab === "payments" && "Pagos y Configuración"}
                 {activeTab === "history" && "Historial"}
                 {activeTab === "analytics" && "Analíticas"}
@@ -534,6 +530,12 @@ export default function OwnerDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <Link to={createPageUrl("Home")}>
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <Home className="h-4 w-4 mr-2" />
+                  Inicio
+                </Button>
+              </Link>
               <NotificationCenter
                                     notifications={notifications}
                                     onMarkAsRead={(id) => markNotificationReadMutation.mutate(id)}
@@ -554,37 +556,6 @@ export default function OwnerDashboard() {
         </header>
 
         <div className="p-4 lg:p-8">
-          {/* Dashboard */}
-          {activeTab === "dashboard" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-slate-500">Reservas Hoy</p><p className="text-3xl font-bold text-slate-800">{todayReservations.length}</p></div><div className="p-3 bg-teal-100 rounded-xl"><Calendar className="h-6 w-6 text-teal-600" /></div></div></CardContent></Card>
-                <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-slate-500">Pendientes</p><p className="text-3xl font-bold text-amber-600">{pendingReservations.length}</p></div><div className="p-3 bg-amber-100 rounded-xl"><Clock className="h-6 w-6 text-amber-600" /></div></div></CardContent></Card>
-                <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-slate-500">Ingresos Reservas</p><p className="text-3xl font-bold text-green-600">S/ {totalIncome}</p></div><div className="p-3 bg-green-100 rounded-xl"><DollarSign className="h-6 w-6 text-green-600" /></div></div></CardContent></Card>
-                <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-slate-500">Ventas Productos</p><p className="text-3xl font-bold text-purple-600">S/ {totalSalesIncome}</p></div><div className="p-3 bg-purple-100 rounded-xl"><ShoppingCart className="h-6 w-6 text-purple-600" /></div></div></CardContent></Card>
-              </div>
-              {pendingReservations.length > 0 && (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-amber-500" />
-                    Reservas Pendientes ({pendingReservations.length})
-                  </h2>
-                  <div className="space-y-4">
-                    {pendingReservations.slice(0, 5).map(reservation => (
-                      <PendingReservationCard
-                        key={reservation.id}
-                        reservation={reservation}
-                        onAccept={(r) => updateReservationMutation.mutate({ id: r.id, data: { status: "accepted" }, reservation: r })}
-                        onReject={(r) => updateReservationMutation.mutate({ id: r.id, data: { status: "rejected" }, reservation: r })}
-                        isLoading={updateReservationMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Calendar */}
           {activeTab === "calendar" && (
             <div className="space-y-6">
@@ -824,73 +795,85 @@ export default function OwnerDashboard() {
             />
           )}
 
-          {/* Products */}
-          {activeTab === "products" && (
+          {/* Tienda (Productos + Ventas) */}
+          {activeTab === "tienda" && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <p className="text-slate-500">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
-                <Dialog open={showProductDialog} onOpenChange={(open) => { setShowProductDialog(open); if (!open) { setEditingProduct(null); setNewProduct({ name: "", description: "", price: 0, stock: 0, category: "bebidas" }); } }}>
-                  <DialogTrigger asChild><Button className="bg-teal-600"><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button></DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>{editingProduct ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div><Label>Nombre *</Label><Input value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="mt-1" /></div>
-                      <div><Label>Descripción</Label><Textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} className="mt-1" /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Precio (S/)</Label><Input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} className="mt-1" /></div>
-                        <div><Label>Stock</Label><Input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value)})} className="mt-1" /></div>
-                      </div>
-                      <div><Label>Categoría</Label><Select value={newProduct.category} onValueChange={(v) => setNewProduct({...newProduct, category: v})}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bebidas">Bebidas</SelectItem><SelectItem value="snacks">Snacks</SelectItem><SelectItem value="equipamiento">Equipamiento</SelectItem><SelectItem value="alquiler">Alquiler</SelectItem><SelectItem value="otros">Otros</SelectItem></SelectContent></Select></div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="flex-1" onClick={() => setShowProductDialog(false)}>Cancelar</Button>
-                      <Button className="flex-1 bg-teal-600" onClick={() => editingProduct ? updateProductMutation.mutate({ id: editingProduct.id, data: newProduct }) : createProductMutation.mutate(newProduct)}>{editingProduct ? "Guardar" : "Crear"}</Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              {products.length === 0 ? <EmptyState icon={Package} title="Sin productos" description="Agrega productos" /> : (
-                <Card><Table><TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Categoría</TableHead><TableHead>Precio</TableHead><TableHead>Stock</TableHead><TableHead>Acciones</TableHead></TableRow></TableHeader>
-                  <TableBody>{products.map(product => (
-                    <TableRow key={product.id}><TableCell className="font-medium">{product.name}</TableCell><TableCell><Badge variant="outline" className="capitalize">{product.category}</Badge></TableCell><TableCell>S/ {product.price}</TableCell><TableCell><span className={product.stock <= 5 ? "text-red-600 font-bold" : ""}>{product.stock}</span></TableCell>
-                      <TableCell><div className="flex gap-2"><Button size="icon" variant="ghost" onClick={() => { setEditingProduct(product); setNewProduct({ name: product.name, description: product.description || "", price: product.price, stock: product.stock, category: product.category }); setShowProductDialog(true); }}><Edit className="h-4 w-4" /></Button>
-                        <AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Eliminar?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deleteProductMutation.mutate(product.id)} className="bg-red-600">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                      </div></TableCell></TableRow>
-                  ))}</TableBody></Table></Card>
-              )}
-            </div>
-          )}
+              <Tabs defaultValue="productos">
+                <TabsList className="bg-slate-100">
+                  <TabsTrigger value="productos" className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Productos ({products.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="ventas" className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Ventas ({sales.length})
+                  </TabsTrigger>
+                </TabsList>
 
-          {/* Sales */}
-          {activeTab === "sales" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4"><p className="text-slate-500">{sales.length} venta{sales.length !== 1 ? 's' : ''}</p><Badge className="bg-green-100 text-green-700">Total: S/ {totalSalesIncome}</Badge></div>
-                <Dialog open={showSaleDialog} onOpenChange={setShowSaleDialog}>
-                  <DialogTrigger asChild><Button className="bg-teal-600"><ShoppingCart className="h-4 w-4 mr-2" />Nueva Venta</Button></DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Registrar Venta</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div><Label>Producto *</Label><Select value={newSale.product_id} onValueChange={(v) => setNewSale({...newSale, product_id: v})}><SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona" /></SelectTrigger><SelectContent>{products.filter(p => p.stock > 0).map(p => <SelectItem key={p.id} value={p.id}>{p.name} - S/ {p.price} (Stock: {p.stock})</SelectItem>)}</SelectContent></Select></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Cantidad</Label><Input type="number" min={1} value={newSale.quantity} onChange={(e) => setNewSale({...newSale, quantity: parseInt(e.target.value)})} className="mt-1" /></div>
-                        <div><Label>Pago</Label><Select value={newSale.payment_method} onValueChange={(v) => setNewSale({...newSale, payment_method: v})}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="efectivo">Efectivo</SelectItem><SelectItem value="yape">Yape</SelectItem><SelectItem value="plin">Plin</SelectItem></SelectContent></Select></div>
-                      </div>
-                      {newSale.product_id && <div className="p-4 bg-teal-50 rounded-xl"><p className="text-sm text-teal-600">Total</p><p className="text-2xl font-bold text-teal-700">S/ {(products.find(p => p.id === newSale.product_id)?.price || 0) * newSale.quantity}</p></div>}
-                    </div>
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="flex-1" onClick={() => setShowSaleDialog(false)}>Cancelar</Button>
-                      <Button className="flex-1 bg-teal-600" onClick={() => createSaleMutation.mutate(newSale)} disabled={!newSale.product_id || createSaleMutation.isPending}>{createSaleMutation.isPending ? "Registrando..." : "Registrar"}</Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              {sales.length === 0 ? <EmptyState icon={ShoppingCart} title="Sin ventas" description="Registra tu primera venta" /> : (
-                <Card><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Total</TableHead><TableHead>Pago</TableHead></TableRow></TableHeader>
-                  <TableBody>{sales.map(sale => (
-                    <TableRow key={sale.id}><TableCell>{format(new Date(sale.created_date), "d MMM HH:mm", { locale: es })}</TableCell><TableCell className="font-medium">{sale.product_name}</TableCell><TableCell>{sale.quantity}</TableCell><TableCell className="font-bold text-green-600">S/ {sale.total_price}</TableCell><TableCell><Badge variant="outline" className="capitalize">{sale.payment_method}</Badge></TableCell></TableRow>
-                  ))}</TableBody></Table></Card>
-              )}
+                <TabsContent value="productos" className="space-y-4 mt-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-slate-500">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
+                    <Dialog open={showProductDialog} onOpenChange={(open) => { setShowProductDialog(open); if (!open) { setEditingProduct(null); setNewProduct({ name: "", description: "", price: 0, stock: 0, category: "bebidas" }); } }}>
+                      <DialogTrigger asChild><Button className="bg-teal-600"><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button></DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader><DialogTitle>{editingProduct ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div><Label>Nombre *</Label><Input value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="mt-1" /></div>
+                          <div><Label>Descripción</Label><Textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} className="mt-1" /></div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div><Label>Precio (S/)</Label><Input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} className="mt-1" /></div>
+                            <div><Label>Stock</Label><Input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value)})} className="mt-1" /></div>
+                          </div>
+                          <div><Label>Categoría</Label><Select value={newProduct.category} onValueChange={(v) => setNewProduct({...newProduct, category: v})}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bebidas">Bebidas</SelectItem><SelectItem value="snacks">Snacks</SelectItem><SelectItem value="equipamiento">Equipamiento</SelectItem><SelectItem value="alquiler">Alquiler</SelectItem><SelectItem value="otros">Otros</SelectItem></SelectContent></Select></div>
+                        </div>
+                        <div className="flex gap-3">
+                          <Button variant="outline" className="flex-1" onClick={() => setShowProductDialog(false)}>Cancelar</Button>
+                          <Button className="flex-1 bg-teal-600" onClick={() => editingProduct ? updateProductMutation.mutate({ id: editingProduct.id, data: newProduct }) : createProductMutation.mutate(newProduct)}>{editingProduct ? "Guardar" : "Crear"}</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {products.length === 0 ? <EmptyState icon={Package} title="Sin productos" description="Agrega productos" /> : (
+                    <Card><Table><TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Categoría</TableHead><TableHead>Precio</TableHead><TableHead>Stock</TableHead><TableHead>Acciones</TableHead></TableRow></TableHeader>
+                      <TableBody>{products.map(product => (
+                        <TableRow key={product.id}><TableCell className="font-medium">{product.name}</TableCell><TableCell><Badge variant="outline" className="capitalize">{product.category}</Badge></TableCell><TableCell>S/ {product.price}</TableCell><TableCell><span className={product.stock <= 5 ? "text-red-600 font-bold" : ""}>{product.stock}</span></TableCell>
+                          <TableCell><div className="flex gap-2"><Button size="icon" variant="ghost" onClick={() => { setEditingProduct(product); setNewProduct({ name: product.name, description: product.description || "", price: product.price, stock: product.stock, category: product.category }); setShowProductDialog(true); }}><Edit className="h-4 w-4" /></Button>
+                            <AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Eliminar?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deleteProductMutation.mutate(product.id)} className="bg-red-600">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                          </div></TableCell></TableRow>
+                      ))}</TableBody></Table></Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="ventas" className="space-y-4 mt-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4"><p className="text-slate-500">{sales.length} venta{sales.length !== 1 ? 's' : ''}</p><Badge className="bg-green-100 text-green-700">Total: S/ {totalSalesIncome}</Badge></div>
+                    <Dialog open={showSaleDialog} onOpenChange={setShowSaleDialog}>
+                      <DialogTrigger asChild><Button className="bg-teal-600"><ShoppingCart className="h-4 w-4 mr-2" />Nueva Venta</Button></DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader><DialogTitle>Registrar Venta</DialogTitle></DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div><Label>Producto *</Label><Select value={newSale.product_id} onValueChange={(v) => setNewSale({...newSale, product_id: v})}><SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona" /></SelectTrigger><SelectContent>{products.filter(p => p.stock > 0).map(p => <SelectItem key={p.id} value={p.id}>{p.name} - S/ {p.price} (Stock: {p.stock})</SelectItem>)}</SelectContent></Select></div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div><Label>Cantidad</Label><Input type="number" min={1} value={newSale.quantity} onChange={(e) => setNewSale({...newSale, quantity: parseInt(e.target.value)})} className="mt-1" /></div>
+                            <div><Label>Pago</Label><Select value={newSale.payment_method} onValueChange={(v) => setNewSale({...newSale, payment_method: v})}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="efectivo">Efectivo</SelectItem><SelectItem value="yape">Yape</SelectItem><SelectItem value="plin">Plin</SelectItem></SelectContent></Select></div>
+                          </div>
+                          {newSale.product_id && <div className="p-4 bg-teal-50 rounded-xl"><p className="text-sm text-teal-600">Total</p><p className="text-2xl font-bold text-teal-700">S/ {(products.find(p => p.id === newSale.product_id)?.price || 0) * newSale.quantity}</p></div>}
+                        </div>
+                        <div className="flex gap-3">
+                          <Button variant="outline" className="flex-1" onClick={() => setShowSaleDialog(false)}>Cancelar</Button>
+                          <Button className="flex-1 bg-teal-600" onClick={() => createSaleMutation.mutate(newSale)} disabled={!newSale.product_id || createSaleMutation.isPending}>{createSaleMutation.isPending ? "Registrando..." : "Registrar"}</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {sales.length === 0 ? <EmptyState icon={ShoppingCart} title="Sin ventas" description="Registra tu primera venta" /> : (
+                    <Card><Table><TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Total</TableHead><TableHead>Pago</TableHead></TableRow></TableHeader>
+                      <TableBody>{sales.map(sale => (
+                        <TableRow key={sale.id}><TableCell>{format(new Date(sale.created_date), "d MMM HH:mm", { locale: es })}</TableCell><TableCell className="font-medium">{sale.product_name}</TableCell><TableCell>{sale.quantity}</TableCell><TableCell className="font-bold text-green-600">S/ {sale.total_price}</TableCell><TableCell><Badge variant="outline" className="capitalize">{sale.payment_method}</Badge></TableCell></TableRow>
+                      ))}</TableBody></Table></Card>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
@@ -938,6 +921,7 @@ export default function OwnerDashboard() {
               <ReservationHistoryTable 
                 reservations={allReservations} 
                 courts={courts}
+                onEditReservation={(reservation) => setSelectedReservation(reservation)}
               />
             </div>
           )}

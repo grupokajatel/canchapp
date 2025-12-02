@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Search, Filter, Calendar, Clock, User, MapPin, Phone,
-  DollarSign, MessageSquare, ChevronDown, Eye, Download
+  DollarSign, MessageSquare, ChevronDown, Eye, Download, Edit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
   auto_rejected: { label: "Auto-rechazada", color: "bg-red-100 text-red-700" }
 };
 
-export default function ReservationHistoryTable({ reservations, courts }) {
+export default function ReservationHistoryTable({ reservations, courts, onEditReservation }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [courtFilter, setCourtFilter] = useState("all");
@@ -201,14 +201,24 @@ export default function ReservationHistoryTable({ reservations, courts }) {
                         <Badge className={status.color}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedReservation(reservation)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedReservation(reservation)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {onEditReservation && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEditReservation(reservation)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -288,7 +288,7 @@ export default function ReservationDetailModal({
                     <Calendar className="h-5 w-5 text-slate-400" />
                     <div>
                       <p className="text-xs text-slate-500">Fecha</p>
-                      <p className="font-medium">{format(new Date(reservation.date), "d MMM yyyy", { locale: es })}</p>
+                      <p className="font-medium">{format(new Date(reservation.date + 'T00:00:00'), "d MMM yyyy", { locale: es })}</p>
                     </div>
                   </div>
 
