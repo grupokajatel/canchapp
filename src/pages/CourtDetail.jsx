@@ -234,6 +234,18 @@ export default function CourtDetail() {
     const startHour = sortedSlots[0];
     const endHour = sortedSlots[sortedSlots.length - 1] + 1;
     
+    // Check for duplicate/conflict
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const hasConflict = reservations.some(r => 
+      !["cancelled", "rejected", "auto_rejected"].includes(r.status) &&
+      sortedSlots.some(slot => slot >= r.start_hour && slot < r.end_hour)
+    );
+    
+    if (hasConflict) {
+      toast.error("Ya existe una reserva en el horario seleccionado");
+      return;
+    }
+    
     const responseDeadline = new Date();
     responseDeadline.setMinutes(responseDeadline.getMinutes() + 10);
 
