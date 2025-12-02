@@ -24,7 +24,8 @@ export default function NotificationCenter({
   notifications,
   onMarkAsRead,
   onMarkAllAsRead,
-  onDelete
+  onDelete,
+  onNotificationClick
 }) {
   const [open, setOpen] = useState(false);
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -115,7 +116,13 @@ export default function NotificationCenter({
                       "p-4 hover:bg-slate-50 transition-colors cursor-pointer",
                       !notification.is_read && "bg-blue-50/50"
                     )}
-                    onClick={() => !notification.is_read && onMarkAsRead(notification.id)}
+                    onClick={() => {
+                      if (!notification.is_read) onMarkAsRead(notification.id);
+                      if (onNotificationClick) {
+                        onNotificationClick(notification);
+                        setOpen(false);
+                      }
+                    }}
                   >
                     <div className="flex gap-3">
                       <div className={cn("w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0", color)}>

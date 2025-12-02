@@ -31,6 +31,7 @@ import CalendarMultiSelect from "@/components/owner/CalendarMultiSelect";
 import OwnerConsolidatedCalendar from "@/components/calendar/OwnerConsolidatedCalendar";
 import ReservationDetailModal from "@/components/owner/ReservationDetailModal";
 import NotificationCenter from "@/components/owner/NotificationCenter";
+import ReservationHistoryTable from "@/components/owner/ReservationHistoryTable";
 import CollaboratorManager from "@/components/owner/CollaboratorManager";
 import CourtPhotoUploader from "@/components/owner/CourtPhotoUploader";
 import CourtEditDialog from "@/components/owner/CourtEditDialog";
@@ -418,7 +419,8 @@ export default function OwnerDashboard() {
           { id: "products", icon: Package, label: "Productos" },
           { id: "sales", icon: ShoppingCart, label: "Ventas" },
           { id: "payments", icon: CreditCard, label: "Pagos" },
-          { id: "reports", icon: BarChart3, label: "Reportes" },
+          { id: "history", icon: FileSpreadsheet, label: "Historial" },
+                { id: "reports", icon: BarChart3, label: "Reportes" },
         ].map(item => (
           <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? "bg-teal-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
@@ -457,11 +459,18 @@ export default function OwnerDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <NotificationCenter
-                notifications={notifications}
-                onMarkAsRead={(id) => markNotificationReadMutation.mutate(id)}
-                onMarkAllAsRead={() => markAllNotificationsReadMutation.mutate()}
-                onDelete={(id) => deleteNotificationMutation.mutate(id)}
-              />
+                                    notifications={notifications}
+                                    onMarkAsRead={(id) => markNotificationReadMutation.mutate(id)}
+                                    onMarkAllAsRead={() => markAllNotificationsReadMutation.mutate()}
+                                    onDelete={(id) => deleteNotificationMutation.mutate(id)}
+                                    onNotificationClick={(notification) => {
+                                      if (notification.reference_type === "reservation" && notification.reference_id) {
+                                        const res = allReservations.find(r => r.id === notification.reference_id);
+                                        if (res) setSelectedReservation(res);
+                                        setActiveTab("calendar");
+                                      }
+                                    }}
+                                  />
               {pendingReservations.length > 0 && <Badge className="bg-amber-500">{pendingReservations.length} pendiente{pendingReservations.length > 1 ? 's' : ''}</Badge>}
               <Avatar><AvatarImage src={user.profile_photo} /><AvatarFallback>{user.full_name?.charAt(0)}</AvatarFallback></Avatar>
             </div>
@@ -846,13 +855,28 @@ export default function OwnerDashboard() {
             </div>
           )}
 
+          {/* History */}
+          {activeTab === "history" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-slate-800">Historial de Reservas</h2>
+              <ReservationHistoryTable 
+                reservations={allReservations} 
+                courts={courts}
+              />
+            </div>
+          )}
+
           {/* Reports */}
           {activeTab === "reports" && (
             <div className="space-y-6">
               <Card><CardHeader><CardTitle>Exportar Reportes</CardTitle></CardHeader><CardContent><div className="flex flex-wrap gap-3"><Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />Reservas Semanal</Button><Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />Reservas Mensual</Button><Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />Ventas</Button></div></CardContent></Card>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card><CardHeader><CardTitle>Reservas</CardTitle></CardHeader><CardContent><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Totales</p><p className="text-2xl font-bold">{allReservations.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Confirmadas</p><p className="text-2xl font-bold text-green-600">{allReservations.filter(r => ["accepted", "completed"].includes(r.status)).length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Manuales</p><p className="text-2xl font-bold text-purple-600">{allReservations.filter(r => r.is_manual).length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ingresos</p><p className="text-2xl font-bold text-teal-600">S/ {totalIncome}</p></div></div></CardContent></Card>
-                <Card><CardHeader><CardTitle>Ventas</CardTitle></CardHeader><CardContent><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ventas</p><p className="text-2xl font-bold">{sales.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ingresos</p><p className="text-2xl font-bold text-green-600">S/ {totalSalesIncome}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Productos</p><p className="text-2xl font-bold">{products.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Stock Bajo</p><p className="text-2xl font-bold text-red-600">{products.filter(p => p.stock <= 5).length}</p></div></div></CardContent></Card>
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab("history")}>
+                  <CardHeader><CardTitle className="flex items-center justify-between">Reservas <span className="text-xs text-teal-600">Ver historial →</span></CardTitle></CardHeader>
+                  <CardContent><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Totales</p><p className="text-2xl font-bold">{allReservations.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Confirmadas</p><p className="text-2xl font-bold text-green-600">{allReservations.filter(r => ["accepted", "completed"].includes(r.status)).length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Manuales</p><p className="text-2xl font-bold text-purple-600">{allReservations.filter(r => r.is_manual).length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ingresos</p><p className="text-2xl font-bold text-teal-600">S/ {totalIncome}</p></div></div></CardContent></Card>
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab("sales")}>
+                  <CardHeader><CardTitle className="flex items-center justify-between">Ventas <span className="text-xs text-teal-600">Ver ventas →</span></CardTitle></CardHeader>
+                  <CardContent><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ventas</p><p className="text-2xl font-bold">{sales.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Ingresos</p><p className="text-2xl font-bold text-green-600">S/ {totalSalesIncome}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Productos</p><p className="text-2xl font-bold">{products.length}</p></div><div className="p-4 bg-slate-50 rounded-xl"><p className="text-sm text-slate-500">Stock Bajo</p><p className="text-2xl font-bold text-red-600">{products.filter(p => p.stock <= 5).length}</p></div></div></CardContent></Card>
               </div>
             </div>
           )}
