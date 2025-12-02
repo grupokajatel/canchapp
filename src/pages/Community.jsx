@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  Plus, Trophy, Users, Search, Filter, Calendar, MapPin
+  Plus, Trophy, Users, Search, Filter, Calendar, MapPin, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MatchCard from "@/components/community/MatchCard";
 import MatchDetailModal from "@/components/community/MatchDetailModal";
+import QuickMatchesSection from "@/components/community/QuickMatchesSection";
+import CreateQuickMatchDialog from "@/components/community/CreateQuickMatchDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "sonner";
@@ -49,6 +51,8 @@ export default function Community() {
   const [searchQuery, setSearchQuery] = useState("");
   const [joiningMatchId, setJoiningMatchId] = useState(null);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [showQuickMatchDialog, setShowQuickMatchDialog] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
   
   const [newMatch, setNewMatch] = useState({
     title: "",
@@ -67,7 +71,23 @@ export default function Community() {
 
   useEffect(() => {
     loadUser();
+    getUserLocation();
   }, []);
+
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  };
 
   const loadUser = async () => {
     try {
@@ -87,6 +107,11 @@ export default function Community() {
       }
       return base44.entities.Match.filter(query, '-created_date');
     },
+  });
+
+  const { data: courts = [] } = useQuery({
+    queryKey: ['all-courts'],
+    queryFn: () => base44.entities.Court.filter({ status: "approved", is_active: true }),
   });
 
   const createMatchMutation = useMutation({
@@ -114,11 +139,13 @@ export default function Community() {
   });
 
   const joinMatchMutation = useMutation({
-    mutationFn: async ({ matchId, match }) => {
+    mutationFn: async ({ matchId, match, paymentMethod }) => {
       const updatedPlayers = [...(match.players || []), {
         user_id: user.id,
         user_name: user.full_name,
-        user_email: user.email
+        user_email: user.email,
+        payment_method: paymentMethod || "efectivo",
+        joined_at: new Date().toISOString()
       }];
       return base44.entities.Match.update(matchId, {
         players: updatedPlayers,
@@ -164,7 +191,7 @@ export default function Community() {
     createMatchMutation.mutate(matchData);
   };
 
-  const handleJoinMatch = (match) => {
+  const handleJoinMatch = (match, paymentMethod) => {
     if (!user) {
       base44.auth.redirectToLogin(window.location.href);
       return;
@@ -177,7 +204,30 @@ export default function Community() {
     }
 
     setJoiningMatchId(match.id);
-    joinMatchMutation.mutate({ matchId: match.id, match });
+    joinMatchMutation.mutate({ matchId: match.id, match, paymentMethod });
+  };
+
+  const handleCreateQuickMatch = (matchData) => {
+    if (!user) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+
+    const fullMatchData = {
+      ...matchData,
+      organizer_id: user.id,
+      organizer_name: user.full_name,
+      current_players: 1,
+      players: [{
+        user_id: user.id,
+        user_name: user.full_name,
+        user_email: user.email
+      }],
+      status: "open"
+    };
+
+    createMatchMutation.mutate(fullMatchData);
+    setShowQuickMatchDialog(false);
   };
 
   const filteredMatches = matches.filter(match => {
@@ -206,6 +256,17 @@ export default function Community() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Quick Matches Section */}
+        <QuickMatchesSection
+          matches={matches}
+          courts={courts}
+          userLocation={userLocation}
+          user={user}
+          onJoin={(match, paymentMethod) => handleJoinMatch(match, paymentMethod)}
+          isJoining={joiningMatchId}
+          onCreateQuickMatch={() => setShowQuickMatchDialog(true)}
+        />
+
         {/* Actions & Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
@@ -464,6 +525,15 @@ export default function Community() {
           }}
           isJoining={selectedMatch && joiningMatchId === selectedMatch.id}
           currentUserId={user?.id}
+        />
+
+        {/* Create Quick Match Dialog */}
+        <CreateQuickMatchDialog
+          open={showQuickMatchDialog}
+          onClose={() => setShowQuickMatchDialog(false)}
+          courts={courts}
+          onCreateMatch={handleCreateQuickMatch}
+          isLoading={createMatchMutation.isPending}
         />
       </div>
     </div>
