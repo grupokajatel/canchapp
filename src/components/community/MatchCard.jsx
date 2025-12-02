@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function MatchCard({ match, onJoin, isJoining }) {
+export default function MatchCard({ match, onJoin, onViewDetails, isJoining }) {
   const sportLabels = {
     futbol: "Fútbol",
     voley: "Vóley",
@@ -119,15 +119,30 @@ export default function MatchCard({ match, onJoin, isJoining }) {
         </div>
 
         {/* Actions */}
-        {match.status === "open" && (
+        <div className="flex gap-2">
           <Button 
-            className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-lg shadow-teal-500/20"
-            onClick={onJoin}
-            disabled={isJoining}
+            variant="outline"
+            className="flex-1"
+            onClick={(e) => {
+              e.preventDefault();
+              onViewDetails?.();
+            }}
           >
-            {isJoining ? "Uniéndose..." : "Unirse al Partido"}
+            Ver Detalles
           </Button>
-        )}
+          {match.status === "open" && (
+            <Button 
+              className="flex-1 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
+              onClick={(e) => {
+                e.preventDefault();
+                onJoin?.();
+              }}
+              disabled={isJoining}
+            >
+              {isJoining ? "..." : "Unirse"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

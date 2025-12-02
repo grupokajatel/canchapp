@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MatchCard from "@/components/community/MatchCard";
+import MatchDetailModal from "@/components/community/MatchDetailModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export default function Community() {
   const [sportFilter, setSportFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [joiningMatchId, setJoiningMatchId] = useState(null);
+  const [selectedMatch, setSelectedMatch] = useState(null);
   
   const [newMatch, setNewMatch] = useState({
     title: "",
@@ -404,6 +406,7 @@ export default function Community() {
                     key={match.id} 
                     match={match}
                     onJoin={() => handleJoinMatch(match)}
+                    onViewDetails={() => setSelectedMatch(match)}
                     isJoining={joiningMatchId === match.id}
                   />
                 ))}
@@ -435,6 +438,7 @@ export default function Community() {
                       key={match.id} 
                       match={match}
                       onJoin={() => {}}
+                      onViewDetails={() => setSelectedMatch(match)}
                       isJoining={false}
                     />
                   ))}
@@ -449,6 +453,18 @@ export default function Community() {
             </TabsContent>
           )}
         </Tabs>
+
+        {/* Match Detail Modal */}
+        <MatchDetailModal
+          match={selectedMatch}
+          open={!!selectedMatch}
+          onClose={() => setSelectedMatch(null)}
+          onJoin={() => {
+            if (selectedMatch) handleJoinMatch(selectedMatch);
+          }}
+          isJoining={selectedMatch && joiningMatchId === selectedMatch.id}
+          currentUserId={user?.id}
+        />
       </div>
     </div>
   );
