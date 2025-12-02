@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Building2, BarChart3, Plus, ChevronLeft, ChevronRight,
   Check, X, Clock, DollarSign, Users, Menu, LogOut, Home, Package, ShoppingCart,
   Edit, Trash2, CalendarDays, CalendarRange, Bell, FileSpreadsheet, AlertCircle, CreditCard, Settings,
-  Camera, MapPin
+  Camera, MapPin, TrendingUp, Tag, Star, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,10 @@ import CourtEditDialog from "@/components/owner/CourtEditDialog";
 import PendingReservationCard from "@/components/owner/PendingReservationCard";
 import PaymentConfigManager from "@/components/owner/PaymentConfigManager";
 import PaymentHistory from "@/components/owner/PaymentHistory";
+import AnalyticsDashboard from "@/components/owner/AnalyticsDashboard";
+import DynamicPricingManager from "@/components/owner/DynamicPricingManager";
+import PromotionsManager from "@/components/owner/PromotionsManager";
+import ReviewsManager from "@/components/owner/ReviewsManager";
 import NotificationService from "@/components/notifications/NotificationService";
 import { toast } from "sonner";
 
@@ -156,6 +160,34 @@ export default function OwnerDashboard() {
       const configs = await base44.entities.PaymentConfig.filter({ owner_id: user.id });
       return configs[0] || null;
     },
+    enabled: !!user?.id,
+  });
+
+  const { data: pricingRules = [] } = useQuery({
+    queryKey: ['owner-pricing-rules', user?.id],
+    queryFn: () => base44.entities.DynamicPricing.filter({ owner_id: user.id }),
+    enabled: !!user?.id,
+  });
+
+  const { data: promotions = [] } = useQuery({
+    queryKey: ['owner-promotions', user?.id],
+    queryFn: () => base44.entities.Promotion.filter({ owner_id: user.id }),
+    enabled: !!user?.id,
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['owner-reviews', user?.id],
+    queryFn: async () => {
+      const courtIds = courts.map(c => c.id);
+      const allReviews = await base44.entities.Review.list('-created_date', 200);
+      return allReviews.filter(r => courtIds.includes(r.court_id));
+    },
+    enabled: courts.length > 0,
+  });
+
+  const { data: reviewResponses = [] } = useQuery({
+    queryKey: ['owner-review-responses', user?.id],
+    queryFn: () => base44.entities.ReviewResponse.filter({ owner_id: user.id }),
     enabled: !!user?.id,
   });
 
@@ -309,6 +341,41 @@ export default function OwnerDashboard() {
     onSuccess: () => { queryClient.invalidateQueries(['owner-payment-config']); toast.success("Configuración guardada"); }
   });
 
+  const savePricingRuleMutation = useMutation({
+    mutationFn: async ({ data, id }) => {
+      if (id) {
+        return base44.entities.DynamicPricing.update(id, data);
+      }
+      return base44.entities.DynamicPricing.create({ ...data, owner_id: user.id });
+    },
+    onSuccess: () => { queryClient.invalidateQueries(['owner-pricing-rules']); toast.success("Regla guardada"); }
+  });
+
+  const deletePricingRuleMutation = useMutation({
+    mutationFn: (id) => base44.entities.DynamicPricing.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['owner-pricing-rules']); toast.success("Regla eliminada"); }
+  });
+
+  const createPromotionMutation = useMutation({
+    mutationFn: (data) => base44.entities.Promotion.create({ ...data, owner_id: user.id }),
+    onSuccess: () => { queryClient.invalidateQueries(['owner-promotions']); toast.success("Promoción creada"); }
+  });
+
+  const updatePromotionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Promotion.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries(['owner-promotions']); toast.success("Promoción actualizada"); }
+  });
+
+  const deletePromotionMutation = useMutation({
+    mutationFn: (id) => base44.entities.Promotion.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['owner-promotions']); toast.success("Promoción eliminada"); }
+  });
+
+  const createReviewResponseMutation = useMutation({
+    mutationFn: ({ reviewId, response }) => base44.entities.ReviewResponse.create({ review_id: reviewId, owner_id: user.id, response }),
+    onSuccess: () => { queryClient.invalidateQueries(['owner-review-responses']); toast.success("Respuesta enviada"); }
+  });
+
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
       await base44.entities.Payment.update(id, { status });
@@ -420,6 +487,10 @@ export default function OwnerDashboard() {
           { id: "sales", icon: ShoppingCart, label: "Ventas" },
           { id: "payments", icon: CreditCard, label: "Pagos" },
           { id: "history", icon: FileSpreadsheet, label: "Historial" },
+                { id: "analytics", icon: TrendingUp, label: "Analíticas" },
+                { id: "pricing", icon: DollarSign, label: "Precios" },
+                { id: "promos", icon: Tag, label: "Promociones" },
+                { id: "reviews", icon: Star, label: "Reseñas" },
                 { id: "reports", icon: BarChart3, label: "Reportes" },
         ].map(item => (
           <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
@@ -454,6 +525,11 @@ export default function OwnerDashboard() {
                 {activeTab === "products" && "Productos"}
                 {activeTab === "sales" && "Ventas"}
                 {activeTab === "payments" && "Pagos y Configuración"}
+                {activeTab === "history" && "Historial"}
+                {activeTab === "analytics" && "Analíticas"}
+                {activeTab === "pricing" && "Precios Dinámicos"}
+                {activeTab === "promos" && "Promociones"}
+                {activeTab === "reviews" && "Reseñas"}
                 {activeTab === "reports" && "Reportes"}
               </h1>
             </div>
@@ -864,6 +940,66 @@ export default function OwnerDashboard() {
                 courts={courts}
               />
             </div>
+          )}
+
+          {/* Analytics */}
+          {activeTab === "analytics" && (
+            <AnalyticsDashboard 
+              reservations={allReservations}
+              courts={courts}
+            />
+          )}
+
+          {/* Dynamic Pricing */}
+          {activeTab === "pricing" && (
+            <div className="space-y-6">
+              {courts.length === 0 ? (
+                <EmptyState icon={Building2} title="Sin canchas" description="Crea una cancha primero" />
+              ) : (
+                <>
+                  <Select value={selectedCourt?.id || ""} onValueChange={(id) => setSelectedCourt(courts.find(c => c.id === id))}>
+                    <SelectTrigger className="w-64 bg-white">
+                      <SelectValue placeholder="Selecciona cancha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courts.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {selectedCourt && (
+                    <DynamicPricingManager
+                      court={selectedCourt}
+                      pricingRules={pricingRules}
+                      onSave={(data, id) => savePricingRuleMutation.mutate({ data, id })}
+                      onDelete={(id) => deletePricingRuleMutation.mutate(id)}
+                      isLoading={savePricingRuleMutation.isPending}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Promotions */}
+          {activeTab === "promos" && (
+            <PromotionsManager
+              promotions={promotions}
+              courts={courts}
+              onCreate={(data) => createPromotionMutation.mutate(data)}
+              onUpdate={(id, data) => updatePromotionMutation.mutate({ id, data })}
+              onDelete={(id) => deletePromotionMutation.mutate(id)}
+              isLoading={createPromotionMutation.isPending || updatePromotionMutation.isPending}
+            />
+          )}
+
+          {/* Reviews */}
+          {activeTab === "reviews" && (
+            <ReviewsManager
+              reviews={reviews}
+              responses={reviewResponses}
+              courts={courts}
+              onRespond={(reviewId, response) => createReviewResponseMutation.mutate({ reviewId, response })}
+              isLoading={createReviewResponseMutation.isPending}
+            />
           )}
 
           {/* Reports */}
