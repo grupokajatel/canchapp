@@ -1,14 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Clock, MapPin, Users, DollarSign, Trophy } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, DollarSign, Trophy, ThumbsUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import ShareMatchButton from "./ShareMatchButton";
 
-export default function MatchCard({ match, onJoin, onViewDetails, isJoining }) {
+export default function MatchCard({ match, onJoin, onViewDetails, isJoining, showLikes = true }) {
+  const likesCount = match.likes?.length || 0;
   const sportLabels = {
     futbol: "Fútbol",
     voley: "Vóley",
@@ -52,9 +54,17 @@ export default function MatchCard({ match, onJoin, onViewDetails, isJoining }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
         {/* Status Badge */}
-        <Badge className={`absolute top-3 right-3 ${statusColors[match.status]}`}>
-          {statusLabels[match.status]}
-        </Badge>
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {showLikes && likesCount > 0 && (
+            <Badge variant="outline" className="bg-white/90 text-slate-700 text-xs">
+              <ThumbsUp className="h-3 w-3 mr-1" />
+              {likesCount}
+            </Badge>
+          )}
+          <Badge className={statusColors[match.status]}>
+            {statusLabels[match.status]}
+          </Badge>
+        </div>
 
         {/* Sport Badge */}
         <Badge className="absolute top-3 left-3 bg-white/90 text-slate-700">
@@ -120,6 +130,7 @@ export default function MatchCard({ match, onJoin, onViewDetails, isJoining }) {
 
         {/* Actions */}
         <div className="flex gap-2">
+          <ShareMatchButton match={match} size="sm" />
           <Button 
             variant="outline"
             className="flex-1"

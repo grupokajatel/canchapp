@@ -29,6 +29,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MatchCard from "@/components/community/MatchCard";
 import MatchDetailModal from "@/components/community/MatchDetailModal";
+import MatchLikeButtons from "@/components/community/MatchLikeButtons";
+import JoinMatchModal from "@/components/community/JoinMatchModal";
+import EditMatchModal from "@/components/community/EditMatchModal";
 import QuickMatchesSection from "@/components/community/QuickMatchesSection";
 import CreateQuickMatchDialog from "@/components/community/CreateQuickMatchDialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -52,6 +55,9 @@ export default function Community() {
   const [joiningMatchId, setJoiningMatchId] = useState(null);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showQuickMatchDialog, setShowQuickMatchDialog] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMatch, setEditingMatch] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   
   const [newMatch, setNewMatch] = useState({
@@ -143,12 +149,14 @@ export default function Community() {
   });
 
   const joinMatchMutation = useMutation({
-    mutationFn: async ({ matchId, match, paymentMethod }) => {
+    mutationFn: async ({ matchId, match, paymentMethod, nickname }) => {
       const updatedPlayers = [...(match.players || []), {
         user_id: user.id,
         user_name: user.full_name,
         user_email: user.email,
+        nickname: nickname || user.nickname || user.full_name,
         payment_method: paymentMethod || "efectivo",
+        payment_status: match.price_per_person > 0 ? "pending" : "free",
         joined_at: new Date().toISOString()
       }];
       return base44.entities.Match.update(matchId, {
@@ -157,15 +165,79 @@ export default function Community() {
         status: updatedPlayers.length >= match.max_players ? "full" : "open"
       });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['matches']);
       toast.success("¡Te has unido al partido!");
       setJoiningMatchId(null);
+      setShowJoinModal(false);
+      setSelectedMatch(null);
+      
+      // Redirect to location if available
+      const match = variables.match;
+      if (match.court_latitude && match.court_longitude) {
+        window.open(
+          `https://www.google.com/maps/dir/?api=1&destination=${match.court_latitude},${match.court_longitude}`,
+          '_blank'
+        );
+      }
     },
     onError: () => {
       toast.error("Error al unirse al partido");
       setJoiningMatchId(null);
     }
+  });
+
+  const updateMatchMutation = useMutation({
+    mutationFn: ({ matchId, data }) => base44.entities.Match.update(matchId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['matches']);
+      toast.success("Partido actualizado");
+      setShowEditModal(false);
+      setEditingMatch(null);
+    },
+    onError: () => toast.error("Error al actualizar")
+  });
+
+  const likeMatchMutation = useMutation({
+    mutationFn: async (match) => {
+      const likes = match.likes || [];
+      const dislikes = match.dislikes || [];
+      
+      if (likes.includes(user.id)) {
+        // Remove like
+        return base44.entities.Match.update(match.id, {
+          likes: likes.filter(id => id !== user.id)
+        });
+      } else {
+        // Add like, remove dislike if exists
+        return base44.entities.Match.update(match.id, {
+          likes: [...likes, user.id],
+          dislikes: dislikes.filter(id => id !== user.id)
+        });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries(['matches'])
+  });
+
+  const dislikeMatchMutation = useMutation({
+    mutationFn: async (match) => {
+      const likes = match.likes || [];
+      const dislikes = match.dislikes || [];
+      
+      if (dislikes.includes(user.id)) {
+        // Remove dislike
+        return base44.entities.Match.update(match.id, {
+          dislikes: dislikes.filter(id => id !== user.id)
+        });
+      } else {
+        // Add dislike, remove like if exists
+        return base44.entities.Match.update(match.id, {
+          dislikes: [...dislikes, user.id],
+          likes: likes.filter(id => id !== user.id)
+        });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries(['matches'])
   });
 
   const handleCreateMatch = () => {
@@ -195,7 +267,7 @@ export default function Community() {
     createMatchMutation.mutate(matchData);
   };
 
-  const handleJoinMatch = (match, paymentMethod) => {
+  const handleJoinMatch = (match, paymentMethod, nickname) => {
     if (!user) {
       base44.auth.redirectToLogin(window.location.href);
       return;
@@ -208,7 +280,37 @@ export default function Community() {
     }
 
     setJoiningMatchId(match.id);
-    joinMatchMutation.mutate({ matchId: match.id, match, paymentMethod });
+    joinMatchMutation.mutate({ matchId: match.id, match, paymentMethod, nickname });
+  };
+
+  const handleOpenJoinModal = (match) => {
+    if (!user) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+    setSelectedMatch(match);
+    setShowJoinModal(true);
+  };
+
+  const handleEditMatch = (match) => {
+    setEditingMatch(match);
+    setShowEditModal(true);
+  };
+
+  const handleLike = (match) => {
+    if (!user) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+    likeMatchMutation.mutate(match);
+  };
+
+  const handleDislike = (match) => {
+    if (!user) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+    dislikeMatchMutation.mutate(match);
   };
 
   const handleCreateQuickMatch = (matchData) => {
@@ -561,9 +663,10 @@ export default function Community() {
                   <MatchCard 
                     key={match.id} 
                     match={match}
-                    onJoin={() => handleJoinMatch(match)}
+                    onJoin={() => handleOpenJoinModal(match)}
                     onViewDetails={() => setSelectedMatch(match)}
                     isJoining={joiningMatchId === match.id}
+                    showLikes={true}
                   />
                 ))}
               </div>
@@ -612,14 +715,47 @@ export default function Community() {
 
         {/* Match Detail Modal */}
         <MatchDetailModal
-          match={selectedMatch}
-          open={!!selectedMatch}
+          match={selectedMatch && !showJoinModal ? selectedMatch : null}
+          open={!!selectedMatch && !showJoinModal}
           onClose={() => setSelectedMatch(null)}
           onJoin={() => {
-            if (selectedMatch) handleJoinMatch(selectedMatch);
+            if (selectedMatch) handleOpenJoinModal(selectedMatch);
           }}
+          onEdit={() => {
+            if (selectedMatch && selectedMatch.organizer_id === user?.id) {
+              handleEditMatch(selectedMatch);
+            }
+          }}
+          onLike={() => selectedMatch && handleLike(selectedMatch)}
+          onDislike={() => selectedMatch && handleDislike(selectedMatch)}
           isJoining={selectedMatch && joiningMatchId === selectedMatch.id}
           currentUserId={user?.id}
+        />
+
+        {/* Join Match Modal */}
+        <JoinMatchModal
+          match={selectedMatch}
+          open={showJoinModal}
+          onClose={() => {
+            setShowJoinModal(false);
+            setSelectedMatch(null);
+          }}
+          onJoin={(match, paymentMethod, nickname) => handleJoinMatch(match, paymentMethod, nickname)}
+          isJoining={joiningMatchId === selectedMatch?.id}
+          user={user}
+        />
+
+        {/* Edit Match Modal */}
+        <EditMatchModal
+          match={editingMatch}
+          open={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingMatch(null);
+          }}
+          onSave={(matchId, data) => updateMatchMutation.mutate({ matchId, data })}
+          isSaving={updateMatchMutation.isPending}
+          courts={courts}
         />
 
         {/* Create Quick Match Dialog */}

@@ -11,8 +11,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
   Calendar, Clock, MapPin, Users, DollarSign, Trophy,
-  Phone, MessageCircle, Share2, User, Crown
+  Phone, MessageCircle, Share2, User, Crown, ThumbsUp, ThumbsDown, Edit, Navigation
 } from "lucide-react";
+import ShareMatchButton from "./ShareMatchButton";
 
 const SPORT_LABELS = {
   futbol: "Fútbol",
@@ -30,7 +31,7 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", color: "bg-red-100 text-red-700" }
 };
 
-export default function MatchDetailModal({ match, open, onClose, onJoin, isJoining, currentUserId }) {
+export default function MatchDetailModal({ match, open, onClose, onJoin, onEdit, onLike, onDislike, isJoining, currentUserId }) {
   if (!match) return null;
 
   const playerProgress = (match.current_players / match.max_players) * 100;
@@ -38,6 +39,10 @@ export default function MatchDetailModal({ match, open, onClose, onJoin, isJoini
   const isJoined = match.players?.some(p => p.user_id === currentUserId);
   const statusConfig = STATUS_CONFIG[match.status] || STATUS_CONFIG.open;
   const spotsLeft = match.max_players - (match.current_players || 1);
+  const likes = match.likes || [];
+  const dislikes = match.dislikes || [];
+  const hasLiked = currentUserId && likes.includes(currentUserId);
+  const hasDisliked = currentUserId && dislikes.includes(currentUserId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -171,6 +176,34 @@ export default function MatchDetailModal({ match, open, onClose, onJoin, isJoini
 
           <Separator />
 
+          {/* Like/Dislike */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-600">¿Te gusta este partido?</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={hasLiked ? "bg-green-50 border-green-300 text-green-700" : ""}
+                onClick={onLike}
+              >
+                <ThumbsUp className={`h-4 w-4 mr-1 ${hasLiked ? "fill-current" : ""}`} />
+                {likes.length}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className={hasDisliked ? "bg-red-50 border-red-300 text-red-700" : ""}
+                onClick={onDislike}
+              >
+                <ThumbsDown className={`h-4 w-4 mr-1 ${hasDisliked ? "fill-current" : ""}`} />
+                {dislikes.length}
+              </Button>
+              <ShareMatchButton match={match} />
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Pricing */}
           <div className="flex items-center justify-between p-4 bg-teal-50 rounded-xl">
             <div>
@@ -208,8 +241,13 @@ export default function MatchDetailModal({ match, open, onClose, onJoin, isJoini
             )}
             
             {isOrganizer && (
-              <Button className="flex-1" variant="secondary" disabled>
-                Eres el organizador
+              <Button 
+                className="flex-1" 
+                variant="outline"
+                onClick={onEdit}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Partido
               </Button>
             )}
           </div>
