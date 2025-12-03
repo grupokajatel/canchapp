@@ -3,19 +3,20 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { base44 } from "@/api/base44Client";
 import { 
-  Home, 
-  Search, 
-  Users, 
-  Calendar, 
-  User, 
-  Menu, 
-  X, 
-  LogOut,
-  LayoutDashboard,
-  Building2,
-  Settings,
-  Bell
-} from "lucide-react";
+    Home, 
+    Search, 
+    Users, 
+    Calendar, 
+    User, 
+    Menu, 
+    X, 
+    LogOut,
+    LayoutDashboard,
+    Building2,
+    Settings,
+    Bell,
+    Trophy
+  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -91,11 +92,12 @@ export default function Layout({ children, currentPageName }) {
   const isFullScreen = fullScreenPages.includes(currentPageName);
 
   const clientNavItems = [
-    { name: "Inicio", icon: Home, page: "Home" },
-    { name: "Buscar", icon: Search, page: "SearchCourts" },
-    { name: "Comunidad", icon: Users, page: "Community" },
-    { name: "Mis Reservas", icon: Calendar, page: "MyReservations" },
-  ];
+        { name: "Inicio", icon: Home, page: "Home" },
+        { name: "Buscar", icon: Search, page: "SearchCourts" },
+        { name: "Comunidad", icon: Users, page: "Community" },
+        { name: "Torneos", icon: Trophy, page: "Tournaments" },
+        { name: "Reservas", icon: Calendar, page: "MyReservations" },
+      ];
 
   const getUserTypeLabel = () => {
     if (!user) return "";
