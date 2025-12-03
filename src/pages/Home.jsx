@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import CourtCard from "@/components/courts/CourtCard";
 import VenueCard from "@/components/courts/VenueCard";
 import MatchCard from "@/components/community/MatchCard";
+import MatchDetailModal from "@/components/community/MatchDetailModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 // Calculate distance between two coordinates (Haversine formula)
@@ -39,6 +40,21 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // Load user
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+      } catch (error) {
+        setUser(null);
+      }
+    };
+    loadUser();
+  }, []);
 
   // Get user's location on mount
   useEffect(() => {
@@ -278,7 +294,11 @@ export default function Home() {
         ) : matches.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {matches.map((match) => (
-              <MatchCard key={match.id} match={match} />
+              <MatchCard 
+                key={match.id} 
+                match={match} 
+                onViewDetails={() => setSelectedMatch(match)}
+              />
             ))}
           </div>
         ) : (
@@ -370,6 +390,18 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Match Detail Modal */}
+      <MatchDetailModal
+        match={selectedMatch}
+        open={!!selectedMatch}
+        onClose={() => setSelectedMatch(null)}
+        onJoin={() => {
+          window.location.href = createPageUrl("Community");
+        }}
+        isJoining={false}
+        currentUserId={user?.id}
+      />
     </div>
   );
 }

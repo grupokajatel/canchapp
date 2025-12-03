@@ -5,6 +5,7 @@ import { MapPin, List, Map as MapIcon, Navigation, Locate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CourtCard from "@/components/courts/CourtCard";
+import VenueCard from "@/components/courts/VenueCard";
 import CourtFilters from "@/components/courts/CourtFilters";
 import MapCourtPopup from "@/components/courts/MapCourtPopup";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -173,6 +174,30 @@ export default function SearchCourts() {
       });
   }, [courts, filters, userLocation]);
 
+  // Group courts by venue (owner_id)
+  const venues = useMemo(() => {
+    if (filteredCourts.length === 0) return [];
+    
+    const venueMap = new Map();
+    filteredCourts.forEach(court => {
+      const key = court.owner_id;
+      if (!venueMap.has(key)) {
+        venueMap.set(key, { courts: [], mainCourt: court });
+      }
+      venueMap.get(key).courts.push(court);
+    });
+
+    return Array.from(venueMap.values())
+      .map(venue => ({
+        ...venue,
+        mainCourt: {
+          ...venue.courts[0],
+          distance: Math.min(...venue.courts.map(c => c.distance || 999))
+        }
+      }))
+      .sort((a, b) => (a.mainCourt.distance || 999) - (b.mainCourt.distance || 999));
+  }, [filteredCourts]);
+
   const clearFilters = () => {
     setFilters({
       search: "",
@@ -237,7 +262,7 @@ export default function SearchCourts() {
         {/* View Toggle & Results Count */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-slate-600">
-            {filteredCourts.length} cancha{filteredCourts.length !== 1 ? 's' : ''} encontrada{filteredCourts.length !== 1 ? 's' : ''}
+            {filteredCourts.length} cancha{filteredCourts.length !== 1 ? 's' : ''} en {venues.length} local{venues.length !== 1 ? 'es' : ''}
           </p>
           <Tabs value={viewMode} onValueChange={setViewMode}>
             <TabsList className="bg-slate-100">
@@ -257,10 +282,14 @@ export default function SearchCourts() {
         {isLoading ? (
           <LoadingSpinner className="py-20" text="Buscando canchas..." />
         ) : viewMode === "list" ? (
-          filteredCourts.length > 0 ? (
+          venues.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourts.map((court) => (
-                <CourtCard key={court.id} court={court} showDistance={!!userLocation} />
+              {venues.map((venue) => (
+                venue.courts.length > 1 ? (
+                  <VenueCard key={venue.mainCourt.owner_id} venue={venue} showDistance={!!userLocation} />
+                ) : (
+                  <CourtCard key={venue.mainCourt.id} court={venue.mainCourt} showDistance={!!userLocation} />
+                )
               ))}
             </div>
           ) : (

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, MapPin, SlidersHorizontal, X, Clock, Wifi, Car, ShowerHead, Coffee, Shirt, Users, Dumbbell, Lightbulb, Check } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, X, Clock, Wifi, Car, ShowerHead, Coffee, Shirt, Users, Dumbbell, Lightbulb, Check, Dribbble, CircleDot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,12 +30,12 @@ const DEPARTMENTS = [
 ];
 
 const SPORT_TYPES = [
-  { value: "futbol", label: "Fútbol" },
-  { value: "voley", label: "Vóley" },
-  { value: "basquet", label: "Básquet" },
-  { value: "futsal", label: "Futsal" },
-  { value: "tenis", label: "Tenis" },
-  { value: "otro", label: "Otro" },
+  { value: "futbol", label: "Fútbol", icon: "⚽" },
+  { value: "voley", label: "Vóley", icon: "🏐" },
+  { value: "basquet", label: "Básquet", icon: "🏀" },
+  { value: "futsal", label: "Futsal", icon: "⚽" },
+  { value: "tenis", label: "Tenis", icon: "🎾" },
+  { value: "otro", label: "Otro", icon: "🏅" },
 ];
 
 const AMENITIES = [
@@ -102,18 +102,49 @@ export default function CourtFilters({ filters, onFilterChange, onClearFilters }
           </SelectContent>
         </Select>
 
-        {/* Sport Type Select */}
+        {/* Sport Type Icons */}
+        <div className="hidden lg:flex items-center gap-1 border border-slate-200 rounded-lg p-1 bg-white">
+          <button
+            onClick={() => onFilterChange({ ...filters, sport_type: "all" })}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+              filters.sport_type === "all" || !filters.sport_type
+                ? "bg-teal-600 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Todos
+          </button>
+          {SPORT_TYPES.map((sport) => (
+            <button
+              key={sport.value}
+              onClick={() => onFilterChange({ ...filters, sport_type: sport.value })}
+              className={`px-3 py-2 rounded-md text-sm transition-all flex items-center gap-1 ${
+                filters.sport_type === sport.value
+                  ? "bg-teal-600 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title={sport.label}
+            >
+              <span>{sport.icon}</span>
+              <span className="hidden xl:inline">{sport.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Sport Type Select - Mobile */}
         <Select
           value={filters.sport_type || "all"}
           onValueChange={(value) => onFilterChange({ ...filters, sport_type: value })}
         >
-          <SelectTrigger className="w-full lg:w-40 h-12 border-slate-200">
+          <SelectTrigger className="w-full lg:hidden h-12 border-slate-200">
             <SelectValue placeholder="Deporte" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos los deportes</SelectItem>
             {SPORT_TYPES.map((sport) => (
-              <SelectItem key={sport.value} value={sport.value}>{sport.label}</SelectItem>
+              <SelectItem key={sport.value} value={sport.value}>
+                {sport.icon} {sport.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

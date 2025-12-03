@@ -128,14 +128,14 @@ export default function Layout({ children, currentPageName }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-800 bg-clip-text text-transparent hidden sm:block">
-                CanchApp
-              </span>
-            </Link>
+                            <Link to={createPageUrl("Home")} className="flex items-center gap-2">
+                              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
+                                <span className="text-white font-bold text-lg">C</span>
+                              </div>
+                              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-800 bg-clip-text text-transparent">
+                                CanchApp
+                              </span>
+                            </Link>
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">

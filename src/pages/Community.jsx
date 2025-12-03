@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  Plus, Trophy, Users, Search, Filter, Calendar, MapPin, Zap
+  Plus, Trophy, Users, Search, Filter, Calendar, MapPin, Zap, Upload, Image
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,8 +63,10 @@ export default function Community() {
     max_players: 10,
     price_per_person: 0,
     bet_amount: 0,
+    court_id: "",
     court_name: "",
-    court_address: ""
+    court_address: "",
+    image_url: ""
   });
 
   const queryClient = useQueryClient();
@@ -128,8 +130,10 @@ export default function Community() {
         max_players: 10,
         price_per_person: 0,
         bet_amount: 0,
+        court_id: "",
         court_name: "",
-        court_address: ""
+        court_address: "",
+        image_url: ""
       });
       toast.success("¡Partido creado exitosamente!");
     },
@@ -379,24 +383,69 @@ export default function Community() {
                 </div>
 
                 <div>
-                  <Label>Nombre de la cancha</Label>
-                  <Input
-                    value={newMatch.court_name}
-                    onChange={(e) => setNewMatch({...newMatch, court_name: e.target.value})}
-                    placeholder="Nombre de la cancha"
-                    className="mt-1"
-                  />
+                  <Label>Cancha</Label>
+                  <Select 
+                    value={newMatch.court_id || "manual"} 
+                    onValueChange={(value) => {
+                      if (value === "manual") {
+                        setNewMatch({...newMatch, court_id: "", court_name: "", court_address: ""});
+                      } else {
+                        const selectedCourt = courts.find(c => c.id === value);
+                        if (selectedCourt) {
+                          setNewMatch({
+                            ...newMatch, 
+                            court_id: selectedCourt.id,
+                            court_name: selectedCourt.name, 
+                            court_address: selectedCourt.address
+                          });
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Selecciona una cancha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Ingresar manualmente</SelectItem>
+                      {courts.map(court => (
+                        <SelectItem key={court.id} value={court.id}>
+                          {court.name} - {court.address}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div>
-                  <Label>Dirección</Label>
-                  <Input
-                    value={newMatch.court_address}
-                    onChange={(e) => setNewMatch({...newMatch, court_address: e.target.value})}
-                    placeholder="Dirección de la cancha"
-                    className="mt-1"
-                  />
-                </div>
+                {!newMatch.court_id && (
+                  <>
+                    <div>
+                      <Label>Nombre de la cancha</Label>
+                      <Input
+                        value={newMatch.court_name}
+                        onChange={(e) => setNewMatch({...newMatch, court_name: e.target.value})}
+                        placeholder="Nombre de la cancha"
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Dirección</Label>
+                      <Input
+                        value={newMatch.court_address}
+                        onChange={(e) => setNewMatch({...newMatch, court_address: e.target.value})}
+                        placeholder="Dirección de la cancha"
+                        className="mt-1"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {newMatch.court_id && (
+                  <div className="p-3 bg-teal-50 rounded-lg text-sm text-teal-700">
+                    <p className="font-medium">{newMatch.court_name}</p>
+                    <p className="text-teal-600">{newMatch.court_address}</p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -418,6 +467,52 @@ export default function Community() {
                       min={0}
                       className="mt-1"
                     />
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <Label>Imagen del partido (opcional)</Label>
+                  <div className="mt-1">
+                    {newMatch.image_url ? (
+                      <div className="relative">
+                        <img 
+                          src={newMatch.image_url} 
+                          alt="Preview" 
+                          className="w-full h-40 object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={() => setNewMatch({...newMatch, image_url: ""})}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-teal-500 transition-colors">
+                        <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                        <span className="text-sm text-slate-500">Subir imagen</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                setNewMatch({...newMatch, image_url: file_url});
+                              } catch (error) {
+                                toast.error("Error al subir imagen");
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>

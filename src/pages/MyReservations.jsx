@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Calendar, Clock, MapPin, AlertCircle, Check, X, 
-  RefreshCw, Download, ChevronRight
+  RefreshCw, Download, ChevronRight, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,11 +25,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
+import ReservationDetailModal from "@/components/reservations/ReservationDetailModal";
 import { toast } from "sonner";
 
 export default function MyReservations() {
   const [user, setUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [selectedReservation, setSelectedReservation] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -153,12 +155,14 @@ export default function MyReservations() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <Link to={createPageUrl(`CourtDetail?id=${reservation.court_id}`)}>
-                <Button variant="outline" size="sm">
-                  Ver cancha
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedReservation(reservation)}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Ver detalles
+              </Button>
             </div>
           </div>
         </div>
@@ -281,6 +285,18 @@ export default function MyReservations() {
             </TabsContent>
           </Tabs>
         )}
+
+        {/* Reservation Detail Modal */}
+        <ReservationDetailModal
+          reservation={selectedReservation}
+          open={!!selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+          onCancel={(id) => {
+            cancelReservationMutation.mutate(id);
+            setSelectedReservation(null);
+          }}
+          isCancelling={cancelReservationMutation.isPending}
+        />
       </div>
     </div>
   );
