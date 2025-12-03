@@ -6,6 +6,8 @@ import MyReservations from './pages/MyReservations';
 import Profile from './pages/Profile';
 import OwnerDashboard from './pages/OwnerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Messages from './pages/Messages';
+import Friends from './pages/Friends';
 import __Layout from './Layout.jsx';
 
 
@@ -18,6 +20,8 @@ export const PAGES = {
     "Profile": Profile,
     "OwnerDashboard": OwnerDashboard,
     "AdminDashboard": AdminDashboard,
+    "Messages": Messages,
+    "Friends": Friends,
 }
 
 export const pagesConfig = {

@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 import {
   User, Phone, Mail, MapPin, Camera, Save, 
-  LayoutDashboard, LogOut, Shield, Building2
+  LayoutDashboard, LogOut, Shield, Building2, MessageCircle, Users, AtSign, Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,9 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     phone: "",
     department: "",
-    user_type: "cliente"
+    user_type: "cliente",
+    nickname: "",
+    bio: ""
   });
 
   useEffect(() => {
@@ -57,7 +59,9 @@ export default function Profile() {
       setFormData({
         phone: currentUser.phone || "",
         department: currentUser.department || "",
-        user_type: currentUser.user_type || "cliente"
+        user_type: currentUser.user_type || "cliente",
+        nickname: currentUser.nickname || "",
+        bio: currentUser.bio || ""
       });
     } catch (error) {
       base44.auth.redirectToLogin(window.location.href);
@@ -111,6 +115,9 @@ export default function Profile() {
             </AvatarFallback>
           </Avatar>
           <h1 className="text-2xl font-bold mt-4">{user.full_name}</h1>
+          {user.nickname && (
+            <p className="text-teal-200 mt-1">@{user.nickname}</p>
+          )}
           <p className="text-teal-100 mt-1">{user.email}</p>
           <Badge className="mt-3 bg-white/20 text-white border-white/30">
             {userTypeLabels[user.user_type] || "Cliente"}
@@ -144,6 +151,32 @@ export default function Profile() {
                     value={user.email || ""} 
                     disabled 
                     className="mt-1 bg-slate-50"
+                  />
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <AtSign className="h-4 w-4" />
+                    Nickname
+                  </Label>
+                  <Input
+                    value={formData.nickname}
+                    onChange={(e) => setFormData({...formData, nickname: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')})}
+                    placeholder="tu_nickname"
+                    className="mt-1"
+                    maxLength={20}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Solo letras, números y guión bajo</p>
+                </div>
+
+                <div>
+                  <Label>Biografía</Label>
+                  <Input
+                    value={formData.bio}
+                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                    placeholder="Cuéntanos sobre ti..."
+                    className="mt-1"
+                    maxLength={150}
                   />
                 </div>
 
@@ -207,6 +240,27 @@ export default function Profile() {
 
           {/* Quick Actions */}
           <div className="space-y-4">
+            {/* Community Actions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Comunidad</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link to={createPageUrl("Messages")}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Mensajes
+                  </Button>
+                </Link>
+                <Link to={createPageUrl("Friends")}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Users className="h-4 w-4 mr-2" />
+                    Amigos ({user.friends?.length || 0})
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
             {(formData.user_type === "dueno" || user.user_type === "dueno") && (
               <Card>
                 <CardHeader className="pb-3">
