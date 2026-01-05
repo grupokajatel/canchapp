@@ -1,31 +1,31 @@
-import Home from './pages/Home';
-import SearchCourts from './pages/SearchCourts';
-import CourtDetail from './pages/CourtDetail';
-import Community from './pages/Community';
-import MyReservations from './pages/MyReservations';
-import Profile from './pages/Profile';
-import OwnerDashboard from './pages/OwnerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import Messages from './pages/Messages';
+import Community from './pages/Community';
+import CourtDetail from './pages/CourtDetail';
 import Friends from './pages/Friends';
-import Tournaments from './pages/Tournaments';
+import Home from './pages/Home';
+import Messages from './pages/Messages';
+import MyReservations from './pages/MyReservations';
+import OwnerDashboard from './pages/OwnerDashboard';
+import Profile from './pages/Profile';
+import SearchCourts from './pages/SearchCourts';
 import TournamentDetail from './pages/TournamentDetail';
+import Tournaments from './pages/Tournaments';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
-    "SearchCourts": SearchCourts,
-    "CourtDetail": CourtDetail,
-    "Community": Community,
-    "MyReservations": MyReservations,
-    "Profile": Profile,
-    "OwnerDashboard": OwnerDashboard,
     "AdminDashboard": AdminDashboard,
-    "Messages": Messages,
+    "Community": Community,
+    "CourtDetail": CourtDetail,
     "Friends": Friends,
-    "Tournaments": Tournaments,
+    "Home": Home,
+    "Messages": Messages,
+    "MyReservations": MyReservations,
+    "OwnerDashboard": OwnerDashboard,
+    "Profile": Profile,
+    "SearchCourts": SearchCourts,
     "TournamentDetail": TournamentDetail,
+    "Tournaments": Tournaments,
 }
 
 export const pagesConfig = {

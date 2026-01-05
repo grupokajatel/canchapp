@@ -64,7 +64,10 @@ export default function Profile() {
         bio: currentUser.bio || ""
       });
     } catch (error) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
     } finally {
       setIsLoading(false);
     }
