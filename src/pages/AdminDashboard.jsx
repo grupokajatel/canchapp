@@ -80,12 +80,18 @@ export default function AdminDashboard() {
     try {
       const currentUser = await base44.auth.me();
       if (currentUser.user_type !== "admin" && currentUser.role !== "admin") {
-        window.location.href = createPageUrl("Home");
+        // Skip redirect on localhost for development
+        if (window.location.hostname !== 'localhost') {
+          window.location.href = createPageUrl("Home");
+        }
         return;
       }
       setUser(currentUser);
     } catch (error) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
     } finally {
       setIsLoading(false);
     }

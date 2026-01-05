@@ -219,7 +219,10 @@ export default function CourtDetail() {
 
   const handleReserve = () => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
     if (selectedSlots.length === 0) {

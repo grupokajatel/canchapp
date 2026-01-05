@@ -242,7 +242,10 @@ export default function Community() {
 
   const handleCreateMatch = () => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
 
@@ -269,7 +272,10 @@ export default function Community() {
 
   const handleJoinMatch = (match, paymentMethod, nickname) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
 
@@ -285,7 +291,10 @@ export default function Community() {
 
   const handleOpenJoinModal = (match) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
     setSelectedMatch(match);
@@ -299,7 +308,10 @@ export default function Community() {
 
   const handleLike = (match) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
     likeMatchMutation.mutate(match);
@@ -307,7 +319,10 @@ export default function Community() {
 
   const handleDislike = (match) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
     dislikeMatchMutation.mutate(match);
@@ -315,7 +330,10 @@ export default function Community() {
 
   const handleCreateQuickMatch = (matchData) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      // Skip auth redirect on localhost for development
+      if (window.location.hostname !== 'localhost') {
+        base44.auth.redirectToLogin(window.location.href);
+      }
       return;
     }
 
