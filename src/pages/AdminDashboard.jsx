@@ -195,7 +195,7 @@ export default function AdminDashboard() {
   const handleExportTemplate = async () => {
     try {
       const { data } = await base44.functions.invoke('exportCourtTemplate');
-      const blob = new Blob([data], { type: 'text/csv' });
+      const blob = new Blob([data.csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
