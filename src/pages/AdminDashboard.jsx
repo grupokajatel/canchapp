@@ -66,6 +66,8 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showAdDialog, setShowAdDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showCourtDetailDialog, setShowCourtDetailDialog] = useState(false);
+  const [selectedCourt, setSelectedCourt] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -189,6 +191,42 @@ export default function AdminDashboard() {
       setIsImporting(false);
     }
   };
+
+  const handleExportTemplate = async () => {
+    try {
+      const { data } = await base44.functions.invoke('exportCourtTemplate');
+      const blob = new Blob([data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template_canchas.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success("Template descargado");
+    } catch (error) {
+      toast.error("Error al descargar template");
+    }
+  };
+
+  const handleViewCourtDetail = (court) => {
+    setSelectedCourt(court);
+    setShowCourtDetailDialog(true);
+  };
+
+  const handleUpdateCourt = async (courtId, updates) => {
+    updateCourtMutation.mutate({ id: courtId, data: updates });
+  };
+
+  const deleteCourtMutation = useMutation({
+    mutationFn: (id) => base44.entities.Court.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-courts']);
+      setShowCourtDetailDialog(false);
+      toast.success("Cancha eliminada");
+    }
+  });
 
   if (isLoading) return <LoadingSpinner className="min-h-screen" />;
   if (!user) return null;
@@ -418,6 +456,14 @@ export default function AdminDashboard() {
                     className="pl-10"
                   />
                 </div>
+                <Button 
+                  variant="outline"
+                  onClick={handleExportTemplate}
+                  className="border-teal-600 text-teal-600 hover:bg-teal-50"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Descargar Template
+                </Button>
                 <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                   <DialogTrigger asChild>
                     <Button className="bg-teal-600 hover:bg-teal-700">
@@ -515,6 +561,13 @@ export default function AdminDashboard() {
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleViewCourtDetail(court)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
                                     variant="outline"
                                     className="text-red-600"
                                     onClick={() => updateCourtMutation.mutate({ id: court.id, data: { status: "rejected" } })}
@@ -552,7 +605,7 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {filteredCourts.map(court => (
-                          <TableRow key={court.id}>
+                          <TableRow key={court.id} className="cursor-pointer hover:bg-slate-50" onClick={() => handleViewCourtDetail(court)}>
                             <TableCell className="font-medium">{court.name}</TableCell>
                             <TableCell>{court.department}</TableCell>
                             <TableCell>S/ {court.price_per_hour}</TableCell>
@@ -774,6 +827,176 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* Court Detail Dialog */}
+          <Dialog open={showCourtDetailDialog} onOpenChange={setShowCourtDetailDialog}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Detalle de Cancha</DialogTitle>
+              </DialogHeader>
+              {selectedCourt && (
+                <div className="space-y-6 py-4">
+                  {/* Photos */}
+                  {selectedCourt.photos && selectedCourt.photos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedCourt.photos.map((photo, idx) => (
+                        <img key={idx} src={photo} alt="Cancha" className="w-full h-32 object-cover rounded-lg" />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-500">Nombre</Label>
+                      <p className="font-medium">{selectedCourt.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Deporte</Label>
+                      <p className="font-medium capitalize">{selectedCourt.sport_type}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Dirección</Label>
+                      <p className="font-medium">{selectedCourt.address}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Departamento</Label>
+                      <p className="font-medium">{selectedCourt.department}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Teléfono</Label>
+                      <p className="font-medium">{selectedCourt.phone}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Estado</Label>
+                      <Badge className={
+                        selectedCourt.status === "approved" ? "bg-green-100 text-green-700" :
+                        selectedCourt.status === "rejected" ? "bg-red-100 text-red-700" :
+                        "bg-amber-100 text-amber-700"
+                      }>
+                        {selectedCourt.status === "approved" ? "Aprobada" : selectedCourt.status === "rejected" ? "Rechazada" : "Pendiente"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {selectedCourt.description && (
+                    <div>
+                      <Label className="text-slate-500">Descripción</Label>
+                      <p className="text-sm mt-1">{selectedCourt.description}</p>
+                    </div>
+                  )}
+
+                  {/* Pricing */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-500">Precio por Hora</Label>
+                      <p className="text-2xl font-bold text-teal-600">S/ {selectedCourt.price_per_hour}</p>
+                    </div>
+                    {selectedCourt.night_price_enabled && (
+                      <div>
+                        <Label className="text-slate-500">Precio Nocturno</Label>
+                        <p className="text-2xl font-bold text-blue-600">S/ {selectedCourt.night_price_per_hour}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Schedule */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-500">Horario</Label>
+                      <p className="font-medium">{selectedCourt.opening_hour}:00 - {selectedCourt.closing_hour}:00</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Rating</Label>
+                      <p className="font-medium">{selectedCourt.average_rating?.toFixed(1) || "Sin rating"} ({selectedCourt.total_reviews || 0} reseñas)</p>
+                    </div>
+                  </div>
+
+                  {/* Amenities */}
+                  {selectedCourt.amenities && selectedCourt.amenities.length > 0 && (
+                    <div>
+                      <Label className="text-slate-500">Servicios</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedCourt.amenities.map((amenity, idx) => (
+                          <Badge key={idx} variant="outline">{amenity}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner */}
+                  <div>
+                    <Label className="text-slate-500">Owner ID</Label>
+                    <p className="font-mono text-sm">{selectedCourt.owner_id}</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-4 border-t">
+                    {selectedCourt.status === "pending" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1 text-red-600 border-red-600"
+                          onClick={() => {
+                            handleUpdateCourt(selectedCourt.id, { status: "rejected" });
+                            setShowCourtDetailDialog(false);
+                          }}
+                        >
+                          Rechazar
+                        </Button>
+                        <Button
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            handleUpdateCourt(selectedCourt.id, { status: "approved" });
+                            setShowCourtDetailDialog(false);
+                          }}
+                        >
+                          Aprobar
+                        </Button>
+                      </>
+                    )}
+                    {selectedCourt.status === "approved" && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          handleUpdateCourt(selectedCourt.id, { is_active: !selectedCourt.is_active });
+                        }}
+                      >
+                        {selectedCourt.is_active ? "Desactivar" : "Activar"}
+                      </Button>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="flex-1 text-red-600 border-red-600">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar cancha?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará la cancha permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => deleteCourtMutation.mutate(selectedCourt.id)}
+                            className="bg-red-600"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Users */}
           {activeTab === "users" && (
