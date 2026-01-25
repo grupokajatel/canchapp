@@ -172,7 +172,7 @@ export default function AdminDashboard() {
 
     setIsImporting(true);
     try {
-      const uploadResult = await base44.integrations.Core.UploadFile({ file: importFile });
+      const { data: uploadData } = await base44.integrations.Core.UploadFile({ file: importFile });
       
       const schema = {
         type: "array",
@@ -189,17 +189,17 @@ export default function AdminDashboard() {
         }
       };
 
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url: uploadResult.file_url,
+      const { data: extractData } = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url: uploadData.file_url,
         json_schema: schema
       });
 
-      if (extractResult.status === "error") {
-        toast.error("Error al leer archivo: " + extractResult.details);
+      if (extractData.status === "error") {
+        toast.error("Error al leer archivo: " + extractData.details);
         return;
       }
 
-      setImportPreview({ courts: extractResult.output, file_url: uploadResult.file_url });
+      setImportPreview({ courts: extractData.output, file_url: uploadData.file_url });
       setShowImportPreview(true);
       setShowImportDialog(false);
     } catch (error) {
