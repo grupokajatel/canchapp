@@ -61,28 +61,42 @@ Deno.serve(async (req) => {
         }
 
         // Validar y preparar las canchas
-        const courtsToCreate = courts.map(court => ({
-            name: court.name,
-            description: court.description || "",
-            sport_type: court.sport_type,
-            address: court.address,
-            department: court.department,
-            latitude: court.latitude ? parseFloat(court.latitude) : undefined,
-            longitude: court.longitude ? parseFloat(court.longitude) : undefined,
-            phone: court.phone,
-            price_per_hour: parseFloat(court.price_per_hour),
-            night_price_per_hour: court.night_price_per_hour ? parseFloat(court.night_price_per_hour) : undefined,
-            night_price_enabled: court.night_price_enabled === "true" || court.night_price_enabled === true,
-            opening_hour: court.opening_hour ? parseInt(court.opening_hour) : 6,
-            closing_hour: court.closing_hour ? parseInt(court.closing_hour) : 23,
-            owner_id: court.owner_id || user.id,
-            status: "pending",
-            is_active: true,
-            average_rating: 0,
-            total_reviews: 0,
-            photos: [],
-            amenities: [],
-        }));
+        const courtsToCreate = courts.map(court => {
+            const courtData = {
+                name: court.name,
+                description: court.description || "",
+                sport_type: court.sport_type,
+                address: court.address,
+                department: court.department,
+                phone: String(court.phone),
+                price_per_hour: parseFloat(String(court.price_per_hour).replace(/[^0-9.]/g, '')),
+                opening_hour: court.opening_hour ? parseInt(court.opening_hour) : 6,
+                closing_hour: court.closing_hour ? parseInt(court.closing_hour) : 23,
+                owner_id: court.owner_id || user.id,
+                status: "approved",
+                is_active: true,
+                average_rating: 0,
+                total_reviews: 0,
+                photos: [],
+                amenities: [],
+            };
+
+            // Agregar campos opcionales solo si tienen valor
+            if (court.latitude && court.latitude !== '') {
+                courtData.latitude = parseFloat(court.latitude);
+            }
+            if (court.longitude && court.longitude !== '') {
+                courtData.longitude = parseFloat(court.longitude);
+            }
+            if (court.night_price_per_hour && court.night_price_per_hour !== '') {
+                courtData.night_price_per_hour = parseFloat(String(court.night_price_per_hour).replace(/[^0-9.]/g, ''));
+                courtData.night_price_enabled = true;
+            } else {
+                courtData.night_price_enabled = false;
+            }
+
+            return courtData;
+        });
 
         // Crear canchas en masa usando service role
         const createdCourts = await base44.asServiceRole.entities.Court.bulkCreate(courtsToCreate);
