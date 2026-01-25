@@ -57,6 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "sonner";
+import CommissionsAnalytics from "@/components/admin/CommissionsAnalytics";
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null);
@@ -625,31 +626,7 @@ export default function AdminDashboard() {
 
           {/* Commissions */}
           {activeTab === "commissions" && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Resumen de Comisiones</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-green-50 rounded-xl">
-                      <p className="text-sm text-green-600">Comisiones Totales</p>
-                      <p className="text-2xl font-bold text-green-700">S/ {totalCommissions}</p>
-                    </div>
-                    <div className="p-4 bg-amber-50 rounded-xl">
-                      <p className="text-sm text-amber-600">Pendientes de Pago</p>
-                      <p className="text-2xl font-bold text-amber-700">
-                        S/ {commissions.filter(c => c.status === "pending").reduce((s, c) => s + (c.commission_amount || 0), 0)}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-blue-50 rounded-xl">
-                      <p className="text-sm text-blue-600">Tasa Actual</p>
-                      <p className="text-2xl font-bold text-blue-700">5%</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <CommissionsAnalytics />
           )}
 
           {/* Reports */}
