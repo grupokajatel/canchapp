@@ -27,16 +27,14 @@ Deno.serve(async (req) => {
                     sport_type: { type: "string" },
                     address: { type: "string" },
                     department: { type: "string" },
-                    latitude: { type: "number" },
-                    longitude: { type: "number" },
+                    latitude: { type: "string" },
+                    longitude: { type: "string" },
                     phone: { type: "string" },
-                    photos: { type: "array", items: { type: "string" } },
-                    price_per_hour: { type: "number" },
-                    night_price_per_hour: { type: "number" },
-                    night_price_enabled: { type: "boolean" },
-                    opening_hour: { type: "number" },
-                    closing_hour: { type: "number" },
-                    amenities: { type: "array", items: { type: "string" } },
+                    price_per_hour: { type: "string" },
+                    night_price_per_hour: { type: "string" },
+                    night_price_enabled: { type: "string" },
+                    opening_hour: { type: "string" },
+                    closing_hour: { type: "string" },
                     owner_id: { type: "string" }
                 },
                 required: ["name", "address", "department", "phone", "price_per_hour", "sport_type"]
@@ -64,16 +62,26 @@ Deno.serve(async (req) => {
 
         // Validar y preparar las canchas
         const courtsToCreate = courts.map(court => ({
-            ...court,
-            status: "pending", // Todas empiezan como pendientes de aprobación
+            name: court.name,
+            description: court.description || "",
+            sport_type: court.sport_type,
+            address: court.address,
+            department: court.department,
+            latitude: court.latitude ? parseFloat(court.latitude) : undefined,
+            longitude: court.longitude ? parseFloat(court.longitude) : undefined,
+            phone: court.phone,
+            price_per_hour: parseFloat(court.price_per_hour),
+            night_price_per_hour: court.night_price_per_hour ? parseFloat(court.night_price_per_hour) : undefined,
+            night_price_enabled: court.night_price_enabled === "true" || court.night_price_enabled === true,
+            opening_hour: court.opening_hour ? parseInt(court.opening_hour) : 6,
+            closing_hour: court.closing_hour ? parseInt(court.closing_hour) : 23,
+            owner_id: court.owner_id || user.id,
+            status: "pending",
             is_active: true,
             average_rating: 0,
             total_reviews: 0,
-            opening_hour: court.opening_hour || 6,
-            closing_hour: court.closing_hour || 23,
-            night_price_enabled: court.night_price_enabled || false,
-            photos: court.photos || [],
-            amenities: court.amenities || [],
+            photos: [],
+            amenities: [],
         }));
 
         // Crear canchas en masa usando service role
