@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, Megaphone, DollarSign, FileText, Settings,
   Users, BarChart3, Shield, Plus, Check, X, Eye, Edit, Trash2,
   Menu, LogOut, Home, TrendingUp, MapPin, AlertCircle, Search,
-  FileSpreadsheet, Clock
+  FileSpreadsheet, Clock, Upload, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "sonner";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import CommissionsAnalytics from "@/components/admin/CommissionsAnalytics";
 
 export default function AdminDashboard() {
@@ -71,6 +72,8 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [showImportPreview, setShowImportPreview] = useState(false);
   const [newAd, setNewAd] = useState({
     title: "", description: "", image_url: "", link_url: "",
     location: "home", is_active: true
@@ -161,7 +164,7 @@ export default function AdminDashboard() {
     }
   });
 
-  const handleImportCourts = async () => {
+  const handlePreviewImport = async () => {
     if (!importFile) {
       toast.error("Selecciona un archivo");
       return;
@@ -169,12 +172,48 @@ export default function AdminDashboard() {
 
     setIsImporting(true);
     try {
-      // Subir archivo
       const uploadResult = await base44.integrations.Core.UploadFile({ file: importFile });
       
-      // Importar canchas
-      const { data } = await base44.functions.invoke('importCourts', { 
-        file_url: uploadResult.file_url 
+      const schema = {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            sport_type: { type: "string" },
+            address: { type: "string" },
+            department: { type: "string" },
+            phone: { type: "string" },
+            price_per_hour: { type: "string" }
+          }
+        }
+      };
+
+      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url: uploadResult.file_url,
+        json_schema: schema
+      });
+
+      if (extractResult.status === "error") {
+        toast.error("Error al leer archivo: " + extractResult.details);
+        return;
+      }
+
+      setImportPreview({ courts: extractResult.output, file_url: uploadResult.file_url });
+      setShowImportPreview(true);
+      setShowImportDialog(false);
+    } catch (error) {
+      toast.error("Error al procesar archivo: " + error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    setIsImporting(true);
+    try {
+      const { data } = await base44.functions.invoke('importCourts', {
+        file_url: importPreview.file_url
       });
 
       if (data.error) {
@@ -182,11 +221,12 @@ export default function AdminDashboard() {
       } else {
         toast.success(data.message);
         queryClient.invalidateQueries(['admin-courts']);
-        setShowImportDialog(false);
+        setShowImportPreview(false);
+        setImportPreview(null);
         setImportFile(null);
       }
     } catch (error) {
-      toast.error("Error al importar: " + error.message);
+      toast.error("Error: " + error.message);
     } finally {
       setIsImporting(false);
     }
@@ -473,50 +513,112 @@ export default function AdminDashboard() {
                       Importar desde Excel
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-lg">
                     <DialogHeader>
-                      <DialogTitle>Importar Canchas desde Excel</DialogTitle>
+                      <DialogTitle>Importar Canchas</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="p-4 bg-blue-50 rounded-lg text-sm">
-                        <p className="font-medium mb-2">📋 Formato requerido:</p>
-                        <p className="text-slate-600 mb-1">El archivo debe ser CSV o Excel con las siguientes columnas:</p>
-                        <ul className="list-disc list-inside text-slate-600 space-y-1">
-                          <li><strong>name</strong> (obligatorio)</li>
-                          <li><strong>sport_type</strong> (futbol, voley, basquet, etc.)</li>
-                          <li><strong>address</strong> (obligatorio)</li>
-                          <li><strong>department</strong> (Lima, Arequipa, etc.)</li>
-                          <li><strong>phone</strong> (obligatorio)</li>
-                          <li><strong>price_per_hour</strong> (obligatorio)</li>
-                          <li><strong>owner_id</strong> (ID del dueño)</li>
-                          <li>description, latitude, longitude, opening_hour, closing_hour (opcionales)</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <Label>Seleccionar archivo</Label>
+                    <div className="space-y-4">
+                      <Alert>
+                        <FileText className="h-4 w-4" />
+                        <AlertTitle>Instrucciones</AlertTitle>
+                        <AlertDescription>
+                          <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
+                            <li>Descarga el template CSV</li>
+                            <li>Completa los datos de tus canchas</li>
+                            <li>Guarda el archivo en formato CSV o Excel</li>
+                            <li>Súbelo aquí para vista previa</li>
+                          </ol>
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <Button 
+                        variant="outline" 
+                        onClick={handleExportTemplate}
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Descargar Template CSV
+                      </Button>
+
+                      <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
                         <Input
                           type="file"
                           accept=".csv,.xlsx,.xls"
                           onChange={(e) => setImportFile(e.target.files[0])}
-                          className="mt-1"
+                          className="hidden"
+                          id="csv-upload"
                         />
+                        <label htmlFor="csv-upload" className="cursor-pointer">
+                          {importFile ? (
+                            <div className="space-y-2">
+                              <FileText className="h-8 w-8 mx-auto text-teal-600" />
+                              <p className="text-sm font-medium">{importFile.name}</p>
+                              <p className="text-xs text-slate-500">Click para cambiar archivo</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="h-8 w-8 mx-auto text-slate-400" />
+                              <p className="text-sm font-medium">Click para seleccionar archivo</p>
+                              <p className="text-xs text-slate-500">CSV o Excel (.xlsx)</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={handlePreviewImport}
+                          disabled={!importFile || isImporting}
+                          className="flex-1 bg-teal-600 hover:bg-teal-700"
+                        >
+                          {isImporting ? "Procesando..." : "Vista Previa"}
+                        </Button>
+                        <Button variant="outline" onClick={() => {
+                          setShowImportDialog(false);
+                          setImportFile(null);
+                        }}>
+                          Cancelar
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-3">
+                  </DialogContent>
+                </Dialog>
+
+                {/* Vista Previa */}
+                <Dialog open={showImportPreview} onOpenChange={setShowImportPreview}>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle>Vista Previa - {importPreview?.courts?.length || 0} canchas detectadas</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-auto">
+                      <div className="space-y-3">
+                        {importPreview?.courts?.map((court, idx) => (
+                          <div key={idx} className="border rounded-lg p-4 bg-slate-50">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="font-medium">Nombre:</span> {court.name}</div>
+                              <div><span className="font-medium">Deporte:</span> {court.sport_type}</div>
+                              <div><span className="font-medium">Dirección:</span> {court.address}</div>
+                              <div><span className="font-medium">Departamento:</span> {court.department}</div>
+                              <div><span className="font-medium">Teléfono:</span> {court.phone}</div>
+                              <div><span className="font-medium">Precio/hora:</span> S/ {court.price_per_hour}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-4 border-t">
                       <Button 
-                        variant="outline" 
-                        className="flex-1" 
-                        onClick={() => setShowImportDialog(false)}
+                        onClick={handleConfirmImport}
                         disabled={isImporting}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button 
                         className="flex-1 bg-teal-600 hover:bg-teal-700"
-                        onClick={handleImportCourts}
-                        disabled={!importFile || isImporting}
                       >
-                        {isImporting ? "Importando..." : "Importar"}
+                        {isImporting ? "Importando..." : "Confirmar Importación"}
+                      </Button>
+                      <Button variant="outline" onClick={() => {
+                        setShowImportPreview(false);
+                        setShowImportDialog(true);
+                      }}>
+                        Volver
                       </Button>
                     </div>
                   </DialogContent>
