@@ -16,9 +16,10 @@ Cancha El Sol,Cancha de fútbol con césped sintético,futbol,Av. Los Deportes 1
 Complejo Deportivo Norte,Canchas de vóley profesionales,voley,Jr. Las Flores 456,Arequipa,-16.4090,-71.5375,965432187,60,80,false,7,22,owner456
 Canchas La Victoria,Canchas de básquet techadas,basquet,Calle Los Campeones 789,Cusco,-13.5319,-71.9675,954321876,70,90,true,8,23,owner789`;
 
-        return Response.json({ 
-            success: true, 
-            csvContent 
+        return new Response(csvContent, {
+            headers: {
+                'Content-Type': 'text/csv; charset=utf-8',
+            }
         });
 
     } catch (error) {
