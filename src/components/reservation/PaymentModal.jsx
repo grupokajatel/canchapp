@@ -92,9 +92,22 @@ export default function PaymentModal({
         // Mobile payment with proof - mark as completed and confirm reservation
         paymentStatus = "completed";
         reservationStatus = "accepted";
+      } else if (selectedMethod === "mercadopago") {
+        // Mercado Pago - create preference and redirect
+        const { data } = await base44.functions.invoke('createMercadoPagoPayment', {
+          reservation_id: reservation.id,
+          owner_id: reservation.owner_id
+        });
+
+        if (data.init_point) {
+          // Redirect to Mercado Pago
+          window.location.href = data.init_point;
+          return;
+        } else {
+          throw new Error('Error al crear pago con Mercado Pago');
+        }
       } else {
-        // Card payments would go through external processor
-        // For now, mark as completed for demo
+        // Other card payments
         paymentStatus = "completed";
         reservationStatus = "accepted";
       }
@@ -108,7 +121,7 @@ export default function PaymentModal({
 
       onClose();
     } catch (error) {
-      toast.error("Error al procesar el pago");
+      toast.error(error.message || "Error al procesar el pago");
     } finally {
       setProcessing(false);
     }
@@ -235,8 +248,19 @@ export default function PaymentModal({
             </Alert>
           )}
 
-          {/* Card Payments Notice */}
-          {(selectedMethod === "mercadopago" || selectedMethod === "stripe") && (
+          {/* Mercado Pago Notice */}
+          {selectedMethod === "mercadopago" && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Wallet className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                Serás redirigido a Mercado Pago para completar el pago de forma segura. 
+                Acepta tarjetas, transferencias y más métodos.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Stripe Notice */}
+          {selectedMethod === "stripe" && (
             <Alert>
               <CreditCard className="h-4 w-4" />
               <AlertDescription>
